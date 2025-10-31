@@ -273,6 +273,12 @@ async function processPromptHeadless(
   useAgent: boolean = true,
   dangerouslySkipPermissions?: boolean
 ): Promise<void> {
+  // NEW: Debug logging (remove after verifying)
+  if (verbose) {
+    console.error(`[DEBUG] Options parsed: outputFormat=${outputFormat}, appendSystemPrompt=${!!appendSystemPrompt}, useAgent=${useAgent}`);
+    if (appendSystemPrompt) console.error(`[DEBUG] System prompt: ${appendSystemPrompt}`);
+  }
+  
   try {
     if (verbose) {
       console.error(`🤖 Processing prompt with model: ${model || 'default'}`);
@@ -361,6 +367,17 @@ async function processPromptHeadless(
     } else {
       // Direct client call without agent (no tools, for streaming)
       client = new GrokClient(apiKey, model, baseURL);
+      
+      // NEW: For non-agent mode, get a direct response before handling output
+      const directResponse = await client.chat(messages);  // Simple chat call
+      const assistantMsg = directResponse.choices[0]?.message;
+      if (assistantMsg) {
+        messages.push({
+          role: "assistant",
+          content: assistantMsg.content || "",
+          tool_calls: assistantMsg.tool_calls || undefined
+        });
+      }
     }
 
     // Limit max turns if specified (for agent mode)
@@ -436,7 +453,7 @@ program
     "process a single prompt and exit (headless/print mode)"
   )
   .option(
-    "--append-system-prompt <prompt>",
+    "-s, --append-system-prompt <prompt>",
     "append to system prompt (only with --prompt)"
   )
   .option(
@@ -536,6 +553,10 @@ program
         }
         // For stream-json, disable agent/tools for direct streaming
         if (options.outputFormat === 'stream-json') {
+          useAgent = false;
+        }
+        // NEW: Also disable for json to get direct conversation without agent overhead
+        if (options.outputFormat === 'json') {
           useAgent = false;
         }
         await processPromptHeadless(
