@@ -41,6 +41,20 @@ bun run build
 bun link
 ```
 
+## Building and Installing
+
+To build this project (grok-cli-custom):
+
+```bash
+bun run build
+```
+
+To install globally with bun:
+
+```bash
+bun link
+```
+
 ## Setup
 
 1. Get your Grok API key from [X.AI](https://x.ai)
