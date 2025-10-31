@@ -1,0 +1,8 @@
+5 tests failed:
+✗ -p with stdin input combines with prompt [24834.13ms]
+✗ -p with --append-system-prompt adds to system message [2973.89ms]
+✗ -p with invalid --output-format errors [3300.06ms]
+✗ -p with no prompt errors [578.12ms]
+✗ -p with stdin only [583.22ms]
+
+

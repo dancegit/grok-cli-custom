@@ -110,8 +110,7 @@ function loadModel(modelFromArg?: string): string | undefined {
     const manager = getSettingsManager();
     const validModels = manager.getAvailableModels();
     if (!validModels.includes(model) && !model.startsWith('grok-') && model !== 'grok-code-fast-1' && model !== 'grok-4-fast-reasoning') {
-      console.error(`Invalid model: ${model}. Valid models: ${validModels.join(', ')}. Grok models should start with 'grok-' or be specific like grok-code-fast-1, grok-4-fast-reasoning.`);
-      process.exit(1);
+      throw new Error(`Invalid model: ${model}. Valid models: ${validModels.join(', ')}. Grok models should start with 'grok-' or be specific like grok-code-fast-1, grok-4-fast-reasoning.`);
     }
   }
 
@@ -280,12 +279,15 @@ async function processPromptHeadless(
   // }
   
   try {
+    // Validate output format
+    const validFormats = ['text', 'json', 'stream-json'];
+    if (outputFormat && !validFormats.includes(outputFormat)) {
+      throw new Error(`Invalid output-format: ${outputFormat}. Supported formats: ${validFormats.join(', ')}`);
+    }
+
     if (verbose) {
       console.error(`🤖 Processing prompt with model: ${model || 'default'}`);
       console.error(`📝 Prompt: ${prompt}`);
-      if (appendSystemPrompt) {
-        console.error(`📝 Appended system prompt: ${appendSystemPrompt}`);
-      }
     }
 
     let client: GrokClient;
@@ -294,10 +296,11 @@ async function processPromptHeadless(
     // Append system prompt if provided (only for -p mode)
     if (appendSystemPrompt) {
       messages.unshift({ role: "system", content: appendSystemPrompt });
+      console.error(`Appended system prompt: ${appendSystemPrompt}`);
     }
 
     if (useAgent) {
-      const agent = new GrokAgent(apiKey, baseURL, model, maxToolRounds);
+      const agent = new GrokAgent(apiKey, baseURL, model, maxToolRounds, maxTurns);
 
       // Configure confirmation service for headless mode
       const confirmationService = ConfirmationService.getInstance();
@@ -380,11 +383,7 @@ async function processPromptHeadless(
       }
     }
 
-    // Limit max turns if specified (for agent mode)
-    if (useAgent && maxTurns && maxTurns > 0) {
-      // Note: This is a simple limit; actual turn limiting would require modifying agent logic
-      console.error(`⚠️ Max turns limited to ${maxTurns} (agent mode)`);
-    }
+    // Max turns is now handled by the agent
 
     // Output based on format
     if (outputFormat === 'stream-json') {
@@ -449,7 +448,7 @@ program
     "AI model to use (e.g., grok-code-fast-1, grok-4-fast-reasoning, grok-3-latest) (or set GROK_MODEL env var)"
   )
   .option(
-    "-p, --prompt <prompt>",
+    "-p, --prompt [prompt]",
     "process a single prompt and exit (headless/print mode)"
   )
   .option(
@@ -525,6 +524,14 @@ program
       // Determine if this is print/headless mode
       // Print mode if: --prompt provided, or stdin provided, or positional message provided without interactive intent
       const hasPositionalMessage = Array.isArray(message) && message.length > 0;
+
+      const rawArgs = process.argv.slice(2);
+      const hasPFlag = rawArgs.includes('-p') || rawArgs.includes('--prompt');
+      if (hasPFlag && options.prompt === undefined && !stdinContent.trim() && !hasPositionalMessage) {
+        console.error('No prompt provided for print mode.');
+        process.exit(1);
+      }
+
       isPrintMode = !!options.prompt || !!stdinContent.trim() || (hasPositionalMessage && !options.interactive); // Note: no --interactive flag, but for future
 
       if (options.prompt !== undefined) {
@@ -587,7 +594,7 @@ program
         : message;
 
       // Pass verbose to UI if needed (future enhancement)
-      render(React.createElement(ChatInterface, { agent, initialMessage, verbose: options.verbose }));
+      render(React.createElement(ChatInterface, { agent, initialMessage }));
     } catch (error: any) {
       console.error("❌ Error initializing Grok CLI:", error.message);
       process.exit(1);
@@ -658,5 +665,8 @@ gitCommand
 
 // MCP command
 program.addCommand(createMCPCommand());
+
+// Export for testing
+export { program, loadModel };
 
 program.parse();

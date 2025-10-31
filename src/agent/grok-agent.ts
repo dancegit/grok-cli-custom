@@ -54,18 +54,21 @@ export class GrokAgent extends EventEmitter {
   private abortController: AbortController | null = null;
   private mcpInitialized: boolean = false;
   private maxToolRounds: number;
+  private maxTurns: number;
 
   constructor(
     apiKey: string,
     baseURL?: string,
     model?: string,
-    maxToolRounds?: number
+    maxToolRounds?: number,
+    maxTurns?: number
   ) {
     super();
     const manager = getSettingsManager();
     const savedModel = manager.getCurrentModel();
     const modelToUse = model || savedModel || "grok-code-fast-1";
     this.maxToolRounds = maxToolRounds || 400;
+    this.maxTurns = maxTurns || 10; // Default reasonable limit
     this.grokClient = new GrokClient(apiKey, modelToUse, baseURL);
     this.textEditor = new TextEditorTool();
     this.morphEditor = process.env.MORPH_API_KEY ? new MorphEditorTool() : null;
@@ -213,6 +216,7 @@ Current working directory: ${process.cwd()}`,
     const newEntries: ChatEntry[] = [userEntry];
     const maxToolRounds = this.maxToolRounds; // Prevent infinite loops
     let toolRounds = 0;
+    let turns = 0;
 
     try {
       const tools = await getAllGrokTools();
@@ -225,8 +229,10 @@ Current working directory: ${process.cwd()}`,
           : { search_parameters: { mode: "off" } }
       );
 
-      // Agent loop - continue until no more tool calls or max rounds reached
-      while (toolRounds < maxToolRounds) {
+      // Agent loop - continue until no more tool calls or max rounds/turns reached
+      while (toolRounds < maxToolRounds && turns < this.maxTurns) {
+        turns++; // Increment turn counter for each assistant response
+
         const assistantMessage = currentResponse.choices[0]?.message;
 
         if (!assistantMessage) {
@@ -344,6 +350,17 @@ Current working directory: ${process.cwd()}`,
           type: "assistant",
           content:
             "Maximum tool execution rounds reached. Stopping to prevent infinite loops.",
+          timestamp: new Date(),
+        };
+        this.chatHistory.push(warningEntry);
+        newEntries.push(warningEntry);
+      }
+
+      if (turns >= this.maxTurns) {
+        const warningEntry: ChatEntry = {
+          type: "assistant",
+          content:
+            `Maximum turns (${this.maxTurns}) reached. Stopping to prevent infinite loops.`,
           timestamp: new Date(),
         };
         this.chatHistory.push(warningEntry);

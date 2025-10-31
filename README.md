@@ -1,4 +1,4 @@
-# Grok CLI
+# Grok CLI - Edited
 
 A conversational AI CLI tool powered by Grok with intelligent text editor capabilities and tool usage.
 
@@ -211,10 +211,63 @@ grok -d /path/to/project
 
 Process a single prompt and exit (useful for scripting and automation):
 ```bash
+# Basic usage
 grok --prompt "show me the package.json file"
 grok -p "create a new file called example.js with a hello world function"
+
+# With directory specification
 grok --prompt "run bun test and show me the results" --directory /path/to/project
-grok --prompt "complex task" --max-tool-rounds 50  # Limit tool usage for faster execution
+
+# Limit tool usage for faster execution
+grok --prompt "complex task" --max-tool-rounds 50
+
+# Append system prompt for custom behavior
+grok --prompt "write a Python script" --append-system-prompt "Always use type hints and follow PEP 8"
+
+# Output formats
+grok --prompt "analyze this codebase" --output-format json
+grok --prompt "stream analysis" --output-format stream-json
+
+# Verbose logging
+grok --prompt "debug this issue" --verbose
+
+# Skip permissions for automation
+grok --prompt "automated code review" --dangerously-skip-permissions
+
+# Use stdin input
+echo "analyze this code for bugs" | grok --prompt
+cat myfile.txt | grok -p "summarize this document"
+
+# Limit agent turns
+grok --prompt "step-by-step debugging" --max-turns 10
+
+# Combine options
+grok --prompt "comprehensive code review" \
+  --model grok-code-fast-1 \
+  --max-tool-rounds 100 \
+  --output-format json \
+  --verbose
+```
+
+#### Output Formats
+
+- **`text`** (default): Plain text output of the final response
+- **`json`**: Full conversation as JSON with messages array
+- **`stream-json`**: Real-time streaming JSON output (line-delimited)
+
+#### System Prompts
+
+Use `--append-system-prompt` to customize AI behavior:
+
+```bash
+# Code generation with specific style
+grok -p "write a React component" -s "Use TypeScript, functional components, and Tailwind CSS"
+
+# Analysis with specific focus
+grok -p "review this PR" -s "Focus on security vulnerabilities and performance issues"
+
+# Custom coding standards
+grok -p "refactor this code" -s "Follow Airbnb JavaScript style guide"
 ```
 
 This mode is particularly useful for:
@@ -222,6 +275,8 @@ This mode is particularly useful for:
 - **Scripting**: Integrate AI assistance into shell scripts
 - **Terminal benchmarks**: Perfect for tools like Terminal Bench that need non-interactive execution
 - **Batch processing**: Process multiple prompts programmatically
+- **API integration**: Use JSON output for programmatic consumption
+- **Streaming applications**: Real-time processing with stream-json format
 
 ### Tool Execution Control
 
@@ -281,18 +336,172 @@ Add to `~/.grok/user-settings.json`:
 ### Command Line Options
 
 ```bash
-grok [options]
+grok [options] [message...]
+
+Arguments:
+  message...             Initial message to send to Grok (for interactive mode) or query (for headless mode if no --prompt)
 
 Options:
-  -V, --version          output the version number
-  -d, --directory <dir>  set working directory
-  -k, --api-key <key>    Grok API key (or set GROK_API_KEY env var)
-  -u, --base-url <url>   Grok API base URL (or set GROK_BASE_URL env var)
-  -m, --model <model>    AI model to use (e.g., grok-code-fast-1, grok-4-latest) (or set GROK_MODEL env var)
-  -p, --prompt <prompt>  process a single prompt and exit (headless mode)
-  --max-tool-rounds <rounds>  maximum number of tool execution rounds (default: 400)
-  -h, --help             display help for command
+  -V, --version                        output the version number
+  -d, --directory <dir>                set working directory (default: current directory)
+  -k, --api-key <key>                  Grok API key (or set GROK_API_KEY env var)
+  -u, --base-url <url>                 Grok API base URL (or set GROK_BASE_URL env var)
+  -m, --model <model>                  AI model to use (e.g., grok-code-fast-1, grok-4-latest, grok-3-latest) (or set GROK_MODEL env var)
+  -p, --prompt [prompt]                process a single prompt and exit (headless/print mode)
+  -s, --append-system-prompt <prompt>  append to system prompt (only with --prompt)
+  --max-tool-rounds <rounds>           maximum number of tool execution rounds (default: 400)
+  --max-turns <turns>                  limit the number of agentic turns in non-interactive mode (default: unlimited)
+  --output-format <format>             output format for headless mode (default: text, supported: text, json, stream-json)
+  --verbose                            enable verbose output and logging
+  --dangerously-skip-permissions       skip all permission confirmations (use with caution)
+  -h, --help                           display help for command
+
+Subcommands:
+  git                                  Git operations with AI assistance
+  mcp                                  Manage MCP (Model Context Protocol) servers
 ```
+
+## Use Cases
+
+Grok CLI excels in various development and automation scenarios. Here are some common use cases:
+
+### 🚀 Development Workflow Automation
+
+```bash
+# Automated code review and fixes
+grok -p "review this codebase for security vulnerabilities" --output-format json
+
+# Generate documentation
+grok -p "generate comprehensive README.md for this project"
+
+# Refactor legacy code
+grok -p "modernize this JavaScript code to use ES6+ features"
+
+# Debug complex issues
+grok -p "debug this failing test case" --verbose
+```
+
+### 🔧 CI/CD Integration
+
+```bash
+# Automated testing and reporting
+grok -p "run tests and generate coverage report" --dangerously-skip-permissions
+
+# Code quality checks
+grok -p "analyze code quality and suggest improvements" --model grok-code-fast-1
+
+# Deployment preparation
+grok -p "prepare deployment scripts for production"
+```
+
+### 📊 Data Analysis and Processing
+
+```bash
+# Analyze log files
+cat app.log | grok -p "analyze these logs for errors and patterns"
+
+# Process CSV data
+grok -p "analyze this CSV file and generate insights" --directory /data
+
+# Generate reports
+grok -p "create a summary report from these metrics"
+```
+
+### 🛠️ System Administration
+
+```bash
+# Server monitoring and alerts
+grok -p "monitor system resources and alert on anomalies"
+
+# Configuration management
+grok -p "optimize these nginx config files"
+
+# Backup automation
+grok -p "create automated backup scripts"
+```
+
+### 🎯 Specialized Tasks
+
+```bash
+# API development
+grok -p "design REST API endpoints for user management" -s "Use OpenAPI 3.0 specification"
+
+# Database operations
+grok -p "optimize these SQL queries for better performance"
+
+# Infrastructure as Code
+grok -p "convert this infrastructure setup to Terraform"
+```
+
+### 🤖 AI-Assisted Git Operations
+
+```bash
+# Smart commits with AI-generated messages
+grok git commit-and-push
+
+# Code review before commit
+grok -p "review my staged changes and suggest improvements"
+```
+
+### 🔌 Integration with External Tools
+
+```bash
+# MCP server integration for specialized tools
+grok mcp add github --transport sse --url "https://mcp.github.com/sse"
+grok -p "analyze GitHub issues and create summary"
+
+# Custom MCP servers
+grok mcp add my-custom-tools --transport stdio --command "python" --args "mcp_server.py"
+```
+
+### 📝 Content Creation and Documentation
+
+```bash
+# Technical writing
+grok -p "write technical documentation for this API"
+
+# Code comments and docstrings
+grok -p "add comprehensive docstrings to these functions"
+
+# Tutorial creation
+grok -p "create a step-by-step tutorial for this feature"
+```
+
+## Git Commands
+
+Grok CLI provides AI-assisted Git operations to streamline your development workflow.
+
+### Commit and Push
+
+Automatically generate commit messages and push changes using AI:
+
+```bash
+# Basic usage - commit all changes and push
+grok git commit-and-push
+
+# Specify directory
+grok git commit-and-push --directory /path/to/project
+
+# Use specific API key and model
+grok git commit-and-push --api-key your_key --model grok-code-fast-1
+
+# Limit tool rounds for faster execution
+grok git commit-and-push --max-tool-rounds 50
+```
+
+**What it does:**
+1. Checks for uncommitted changes (`git status --porcelain`)
+2. Stages all changes (`git add .`)
+3. Analyzes the diff and generates an AI-powered commit message
+4. Commits the changes
+5. Pushes to the remote repository (handles upstream setup if needed)
+
+**Options for git commit-and-push:**
+- `-d, --directory <dir>`: Set working directory
+- `-k, --api-key <key>`: Grok API key
+- `-u, --base-url <url>`: Grok API base URL
+- `-m, --model <model>`: AI model to use
+- `--max-tool-rounds <rounds>`: Maximum tool rounds (default: 400)
 
 ### Custom Instructions
 
@@ -382,13 +591,40 @@ This enables Linear tools like:
 - Update issue status and assignees
 - Access team and project information
 
-### Managing MCP Servers
+### MCP Commands Reference
 
 ```bash
-# List all configured servers
+grok mcp [command]
+
+Commands:
+  add <name>           Add an MCP server
+  add-json <name>      Add an MCP server from JSON configuration
+  remove <name>        Remove an MCP server
+  list                 List configured MCP servers
+  test <name>          Test connection to an MCP server
+```
+
+#### Add Server Options
+
+```bash
+grok mcp add <name> [options]
+
+Options:
+  -t, --transport <type>     Transport type (stdio, http, sse, streamable_http)
+  -c, --command <command>    Command to run the server (for stdio transport)
+  -a, --args [args...]       Arguments for the server command
+  -u, --url <url>            URL for HTTP/SSE transport
+  -h, --headers [headers...] HTTP headers (key=value format)
+  -e, --env [env...]         Environment variables (key=value format)
+```
+
+#### Managing MCP Servers
+
+```bash
+# List all configured servers with status and tools
 grok mcp list
 
-# Test server connection
+# Test server connection and show available tools
 grok mcp test server-name
 
 # Remove a server
@@ -400,6 +636,37 @@ grok mcp remove server-name
 - **stdio**: Run MCP server as a subprocess (most common)
 - **http**: Connect to HTTP-based MCP server
 - **sse**: Connect via Server-Sent Events
+- **streamable_http**: Streamable HTTP transport
+
+### Predefined Servers
+
+Some MCP servers are predefined and can be added directly:
+
+```bash
+# Add Linear MCP server (project management)
+grok mcp add linear
+
+# Add GitHub MCP server (if available)
+grok mcp add github
+```
+
+### Advanced Configuration
+
+For complex server configurations, use JSON format:
+
+```bash
+grok mcp add-json my-server '{
+  "transport": {
+    "type": "stdio",
+    "command": "python",
+    "args": ["-m", "my_mcp_server"],
+    "env": {
+      "API_KEY": "your_key",
+      "DEBUG": "true"
+    }
+  }
+}'
+```
 
 ## Development
 
