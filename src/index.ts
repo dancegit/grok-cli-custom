@@ -105,12 +105,12 @@ function loadModel(modelFromArg?: string): string | undefined {
     }
   }
 
-  // Validate model if provided
+  // Validate model if provided - Grok models start with 'grok-' or specific names
   if (model) {
     const manager = getSettingsManager();
     const validModels = manager.getAvailableModels();
-    if (!validModels.includes(model)) {
-      console.error(`Invalid model: ${model}. Valid models: ${validModels.join(', ')}`);
+    if (!validModels.includes(model) && !model.startsWith('grok-') && model !== 'grok-code-fast-1' && model !== 'grok-4-fast-reasoning') {
+      console.error(`Invalid model: ${model}. Valid models: ${validModels.join(', ')}. Grok models should start with 'grok-' or be specific like grok-code-fast-1, grok-4-fast-reasoning.`);
       process.exit(1);
     }
   }
@@ -390,7 +390,7 @@ program
     "A conversational AI CLI tool powered by Grok with text editor capabilities"
   )
   .version("1.0.1")
-  .argument("[message...]", "Initial message to send to Grok")
+  .argument("[message...]", "Initial message to send to Grok (for interactive mode) or query (for print mode if no --prompt)")
   .option("-d, --directory <dir>", "set working directory", process.cwd())
   .option("-k, --api-key <key>", "Grok API key (or set GROK_API_KEY env var)")
   .option(
@@ -399,11 +399,11 @@ program
   )
   .option(
     "-m, --model <model>",
-    "AI model to use (e.g., grok-code-fast-1, grok-4-latest, grok-3-latest, grok-3-fast, grok-3-mini-fast) (or set GROK_MODEL env var)"
+    "AI model to use (e.g., grok-code-fast-1, grok-4-fast-reasoning, grok-3-latest) (or set GROK_MODEL env var)"
   )
   .option(
     "-p, --prompt <prompt>",
-    "process a single prompt and exit (headless mode)"
+    "process a single prompt and exit (headless/print mode)"
   )
   .option(
     "--max-tool-rounds <rounds>",
@@ -415,7 +415,7 @@ program
     "output format for headless mode (default: text, supported: text, json, stream-json)",
     "text"
   )
-  .option("--verbose", "enable verbose output")
+  .option("--verbose", "enable verbose output and logging")
   .option(
     "--dangerously-skip-permissions",
     "skip all permission confirmations (use with caution)"
@@ -458,20 +458,40 @@ program
         confirmationService.setSessionFlag("allOperations", true);
       }
 
-      // Read stdin if applicable (for -p mode)
+      // Read stdin if applicable
       const stdinContent = await readStdin();
 
       let fullPrompt = '';
       let useAgent = true;
+      let isPrintMode = false;
 
-      // Headless mode: process prompt and exit
-      if (options.prompt) {
+      // Determine if this is print/headless mode
+      // Print mode if: --prompt provided, or stdin provided, or positional message provided without interactive intent
+      const hasPositionalMessage = Array.isArray(message) && message.length > 0;
+      isPrintMode = !!options.prompt || !!stdinContent.trim() || (hasPositionalMessage && !options.interactive); // Note: no --interactive flag, but for future
+
+      if (options.prompt !== undefined) {
+        // Explicit --prompt or -p
         fullPrompt = options.prompt;
         if (stdinContent) {
           fullPrompt = stdinContent + '\n\n' + fullPrompt;
         }
+        isPrintMode = true;
+      } else if (hasPositionalMessage) {
+        // Positional message without --prompt: treat as print mode query
+        fullPrompt = message.join(' ');
+        if (stdinContent) {
+          fullPrompt = stdinContent + '\n\n' + fullPrompt;
+        }
+        isPrintMode = true;
+      } else if (stdinContent.trim()) {
+        // No -p but stdin provided: treat as headless prompt
+        fullPrompt = stdinContent;
+      }
+
+      if (isPrintMode && fullPrompt.trim()) {
         if (!fullPrompt.trim()) {
-          console.error('No prompt provided for headless mode.');
+          console.error('No prompt provided for print mode.');
           process.exit(1);
         }
         // For stream-json, disable agent/tools for direct streaming
@@ -489,35 +509,21 @@ program
           useAgent
         );
         return;
-      } else if (stdinContent.trim()) {
-        // No -p but stdin provided: treat as headless prompt
-        fullPrompt = stdinContent;
-        useAgent = options.outputFormat !== 'stream-json';
-        await processPromptHeadless(
-          fullPrompt,
-          apiKey,
-          baseURL,
-          model,
-          useAgent ? maxToolRounds : 0,
-          options.outputFormat || 'text',
-          options.verbose,
-          useAgent
-        );
-        return;
       }
 
-      // Interactive mode: launch UI
+      // Interactive mode: launch UI (only if not print mode)
       const agent = new GrokAgent(apiKey, baseURL, model, maxToolRounds);
       console.log("🤖 Starting Grok CLI Conversational Assistant...\n");
 
       ensureUserSettingsDirectory();
 
-      // Support variadic positional arguments for multi-word initial message
+      // Support variadic positional arguments for multi-word initial message (only in interactive)
       const initialMessage = Array.isArray(message)
         ? message.join(" ")
         : message;
 
-      render(React.createElement(ChatInterface, { agent, initialMessage }));
+      // Pass verbose to UI if needed (future enhancement)
+      render(React.createElement(ChatInterface, { agent, initialMessage, verbose: options.verbose }));
     } catch (error: any) {
       console.error("❌ Error initializing Grok CLI:", error.message);
       process.exit(1);
@@ -540,7 +546,7 @@ gitCommand
   )
   .option(
     "-m, --model <model>",
-    "AI model to use (e.g., grok-code-fast-1, grok-4-latest, grok-3-latest, grok-3-fast, grok-3-mini-fast) (or set GROK_MODEL env var)"
+    "AI model to use (e.g., grok-code-fast-1, grok-4-fast-reasoning, grok-3-latest) (or set GROK_MODEL env var)"
   )
   .option(
     "--max-tool-rounds <rounds>",

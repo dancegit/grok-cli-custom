@@ -1,6 +1,6 @@
 {
   "name": "@vibe-kit/grok-cli",
-  "version": "0.0.33",
+  "version": "0.0.34",
   "description": "An open-source AI agent that brings the power of Grok directly into your terminal.",
   "type": "module",
   "main": "dist/index.js",
@@ -22,6 +22,8 @@
     "start:bun": "bun run dist/index.js",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
     "install:bun": "bun install"
   },
   "keywords": [
