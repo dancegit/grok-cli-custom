@@ -233,17 +233,32 @@ async function processPromptHeadless(
   apiKey: string,
   baseURL?: string,
   model?: string,
-  maxToolRounds?: number
+  maxToolRounds?: number,
+  outputFormat?: string,
+  verbose?: boolean
 ): Promise<void> {
   try {
+    if (verbose) {
+      console.error(`🤖 Processing prompt with model: ${model || 'default'}`);
+      console.error(`📝 Prompt: ${prompt}`);
+    }
+
     const agent = new GrokAgent(apiKey, baseURL, model, maxToolRounds);
 
     // Configure confirmation service for headless mode (auto-approve all operations)
     const confirmationService = ConfirmationService.getInstance();
     confirmationService.setSessionFlag("allOperations", true);
 
+    if (verbose) {
+      console.error("🔄 Processing user message...");
+    }
+
     // Process the user message
     const chatEntries = await agent.processUserMessage(prompt);
+
+    if (verbose) {
+      console.error(`📊 Generated ${chatEntries.length} chat entries`);
+    }
 
     // Convert chat entries to OpenAI compatible message objects
     const messages: ChatCompletionMessageParam[] = [];
@@ -321,7 +336,7 @@ program
   )
   .option(
     "-m, --model <model>",
-    "AI model to use (e.g., grok-code-fast-1, grok-4-latest) (or set GROK_MODEL env var)"
+    "AI model to use (e.g., grok-code-fast-1, grok-4-fast-reasoning, grok-2-1212) (or set GROK_MODEL env var)"
   )
   .option(
     "-p, --prompt <prompt>",
@@ -331,6 +346,16 @@ program
     "--max-tool-rounds <rounds>",
     "maximum number of tool execution rounds (default: 400)",
     "400"
+  )
+  .option(
+    "--output-format <format>",
+    "output format for headless mode (default: json, supported: json, stream-json)",
+    "json"
+  )
+  .option("--verbose", "enable verbose output")
+  .option(
+    "--dangerously-skip-permissions",
+    "skip all permission confirmations (use with caution)"
   )
   .action(async (message, options) => {
     if (options.directory) {
@@ -364,6 +389,12 @@ program
         await saveCommandLineSettings(options.apiKey, options.baseUrl);
       }
 
+      // Configure confirmation service
+      const confirmationService = ConfirmationService.getInstance();
+      if (options.dangerouslySkipPermissions) {
+        confirmationService.setSessionFlag("allOperations", true);
+      }
+
       // Headless mode: process prompt and exit
       if (options.prompt) {
         await processPromptHeadless(
@@ -371,7 +402,9 @@ program
           apiKey,
           baseURL,
           model,
-          maxToolRounds
+          maxToolRounds,
+          options.outputFormat,
+          options.verbose
         );
         return;
       }
@@ -410,7 +443,7 @@ gitCommand
   )
   .option(
     "-m, --model <model>",
-    "AI model to use (e.g., grok-code-fast-1, grok-4-latest) (or set GROK_MODEL env var)"
+    "AI model to use (e.g., grok-code-fast-1, grok-4-fast-reasoning, grok-2-1212) (or set GROK_MODEL env var)"
   )
   .option(
     "--max-tool-rounds <rounds>",
