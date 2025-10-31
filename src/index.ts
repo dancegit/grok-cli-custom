@@ -9,6 +9,8 @@ import { getSettingsManager } from "./utils/settings-manager.js";
 import { ConfirmationService } from "./utils/confirmation-service.js";
 import { createMCPCommand } from "./commands/mcp.js";
 import type { ChatCompletionMessageParam } from "openai/resources/chat";
+import * as fs from "fs";
+import { GrokClient } from "./grok/client.js";
 
 // Load environment variables
 dotenv.config();
@@ -89,9 +91,9 @@ async function saveCommandLineSettings(
 }
 
 // Load model from user settings if not in environment
-function loadModel(): string | undefined {
+function loadModel(modelFromArg?: string): string | undefined {
   // First check environment variables
-  let model = process.env.GROK_MODEL;
+  let model = process.env.GROK_MODEL || modelFromArg;
 
   if (!model) {
     // Use the unified model loading from settings manager
@@ -103,7 +105,37 @@ function loadModel(): string | undefined {
     }
   }
 
+  // Validate model if provided
+  if (model) {
+    const manager = getSettingsManager();
+    const validModels = manager.getAvailableModels();
+    if (!validModels.includes(model)) {
+      console.error(`Invalid model: ${model}. Valid models: ${validModels.join(', ')}`);
+      process.exit(1);
+    }
+  }
+
   return model;
+}
+
+// Read stdin content asynchronously
+function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (process.stdin.isTTY) {
+      resolve('');
+      return;
+    }
+
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => {
+      data += chunk;
+    });
+    process.stdin.on('end', () => {
+      resolve(data.trim());
+    });
+    process.stdin.on('error', reject);
+  });
 }
 
 // Handle commit-and-push command in headless mode
@@ -235,7 +267,8 @@ async function processPromptHeadless(
   model?: string,
   maxToolRounds?: number,
   outputFormat?: string,
-  verbose?: boolean
+  verbose?: boolean,
+  useAgent: boolean = true
 ): Promise<void> {
   try {
     if (verbose) {
@@ -243,80 +276,110 @@ async function processPromptHeadless(
       console.error(`📝 Prompt: ${prompt}`);
     }
 
-    const agent = new GrokAgent(apiKey, baseURL, model, maxToolRounds);
+    let client: GrokClient;
+    let messages: ChatCompletionMessageParam[] = [{ role: "user", content: prompt }];
 
-    // Configure confirmation service for headless mode (auto-approve all operations)
-    const confirmationService = ConfirmationService.getInstance();
-    confirmationService.setSessionFlag("allOperations", true);
+    if (useAgent) {
+      const agent = new GrokAgent(apiKey, baseURL, model, maxToolRounds);
 
-    if (verbose) {
-      console.error("🔄 Processing user message...");
-    }
+      // Configure confirmation service for headless mode (auto-approve all operations)
+      const confirmationService = ConfirmationService.getInstance();
+      confirmationService.setSessionFlag("allOperations", true);
 
-    // Process the user message
-    const chatEntries = await agent.processUserMessage(prompt);
+      if (verbose) {
+        console.error("🔄 Processing user message...");
+      }
 
-    if (verbose) {
-      console.error(`📊 Generated ${chatEntries.length} chat entries`);
-    }
+      // Process the user message with agent (tools enabled)
+      const chatEntries = await agent.processUserMessage(prompt);
 
-    // Convert chat entries to OpenAI compatible message objects
-    const messages: ChatCompletionMessageParam[] = [];
+      if (verbose) {
+        console.error(`📊 Generated ${chatEntries.length} chat entries`);
+      }
 
-    for (const entry of chatEntries) {
-      switch (entry.type) {
-        case "user":
-          messages.push({
-            role: "user",
-            content: entry.content,
-          });
-          break;
+      // Convert chat entries to OpenAI compatible message objects
+      messages = [];
 
-        case "assistant":
-          const assistantMessage: ChatCompletionMessageParam = {
-            role: "assistant",
-            content: entry.content,
-          };
-
-          // Add tool calls if present
-          if (entry.toolCalls && entry.toolCalls.length > 0) {
-            assistantMessage.tool_calls = entry.toolCalls.map((toolCall) => ({
-              id: toolCall.id,
-              type: "function",
-              function: {
-                name: toolCall.function.name,
-                arguments: toolCall.function.arguments,
-              },
-            }));
-          }
-
-          messages.push(assistantMessage);
-          break;
-
-        case "tool_result":
-          if (entry.toolCall) {
+      for (const entry of chatEntries) {
+        switch (entry.type) {
+          case "user":
             messages.push({
-              role: "tool",
-              tool_call_id: entry.toolCall.id,
+              role: "user",
               content: entry.content,
             });
-          }
-          break;
+            break;
+
+          case "assistant":
+            const assistantMessage: ChatCompletionMessageParam = {
+              role: "assistant",
+              content: entry.content,
+            };
+
+            // Add tool calls if present
+            if (entry.toolCalls && entry.toolCalls.length > 0) {
+              assistantMessage.tool_calls = entry.toolCalls.map((toolCall) => ({
+                id: toolCall.id,
+                type: "function",
+                function: {
+                  name: toolCall.function.name,
+                  arguments: toolCall.function.arguments,
+                },
+              }));
+            }
+
+            messages.push(assistantMessage);
+            break;
+
+          case "tool_result":
+            if (entry.toolCall) {
+              messages.push({
+                role: "tool",
+                tool_call_id: entry.toolCall.id,
+                content: entry.content,
+              });
+            }
+            break;
+        }
       }
+
+      client = agent['grokClient']; // Access private client if needed, but for output we use messages
+    } else {
+      // Direct client call without agent (no tools, for streaming)
+      client = new GrokClient(apiKey, model, baseURL);
     }
 
-    // Output each message as a separate JSON object
-    for (const message of messages) {
-      console.log(JSON.stringify(message));
+    // Output based on format
+    if (outputFormat === 'stream-json') {
+      if (!useAgent) {
+        // Stream directly from API
+        const stream = await client.chatStream(messages, [], model);
+        for await (const chunk of stream) {
+          console.log(JSON.stringify(chunk));
+        }
+      } else {
+        // Fallback for agent: output messages as JSON lines (non-streaming)
+        console.error('⚠️ Streaming not supported with tools/agent; falling back to JSON lines');
+        for (const message of messages) {
+          console.log(JSON.stringify(message));
+        }
+      }
+    } else if (outputFormat === 'json') {
+      // Full conversation as JSON
+      console.log(JSON.stringify({ messages }, null, 2));
+    } else {
+      // text: output final assistant content
+      const lastAssistant = messages.filter(m => m.role === 'assistant').pop();
+      const content = lastAssistant?.content || 'No response generated.';
+      console.log(content);
     }
   } catch (error: any) {
     // Output error in OpenAI compatible format
-    console.log(
-      JSON.stringify({
-        role: "assistant",
-        content: `Error: ${error.message}`,
-      })
-    );
+    const errorMsg = { role: "assistant", content: `Error: ${error.message}` };
+    if (outputFormat === 'stream-json' || outputFormat === 'json') {
+      console.log(JSON.stringify(errorMsg));
+    } else {
+      console.log(errorMsg.content);
+    }
     process.exit(1);
   }
 }
@@ -336,7 +399,7 @@ program
   )
   .option(
     "-m, --model <model>",
-    "AI model to use (e.g., grok-code-fast-1, grok-4-fast-reasoning, grok-2-1212) (or set GROK_MODEL env var)"
+    "AI model to use (e.g., grok-code-fast-1, grok-4-latest, grok-3-latest, grok-3-fast, grok-3-mini-fast) (or set GROK_MODEL env var)"
   )
   .option(
     "-p, --prompt <prompt>",
@@ -349,8 +412,8 @@ program
   )
   .option(
     "--output-format <format>",
-    "output format for headless mode (default: json, supported: json, stream-json)",
-    "json"
+    "output format for headless mode (default: text, supported: text, json, stream-json)",
+    "text"
   )
   .option("--verbose", "enable verbose output")
   .option(
@@ -374,7 +437,7 @@ program
       // Get API key from options, environment, or user settings
       const apiKey = options.apiKey || loadApiKey();
       const baseURL = options.baseUrl || loadBaseURL();
-      const model = options.model || loadModel();
+      const model = loadModel(options.model);
       const maxToolRounds = parseInt(options.maxToolRounds) || 400;
 
       if (!apiKey) {
@@ -395,16 +458,50 @@ program
         confirmationService.setSessionFlag("allOperations", true);
       }
 
+      // Read stdin if applicable (for -p mode)
+      const stdinContent = await readStdin();
+
+      let fullPrompt = '';
+      let useAgent = true;
+
       // Headless mode: process prompt and exit
       if (options.prompt) {
+        fullPrompt = options.prompt;
+        if (stdinContent) {
+          fullPrompt = stdinContent + '\n\n' + fullPrompt;
+        }
+        if (!fullPrompt.trim()) {
+          console.error('No prompt provided for headless mode.');
+          process.exit(1);
+        }
+        // For stream-json, disable agent/tools for direct streaming
+        if (options.outputFormat === 'stream-json') {
+          useAgent = false;
+        }
         await processPromptHeadless(
-          options.prompt,
+          fullPrompt,
           apiKey,
           baseURL,
           model,
-          maxToolRounds,
+          useAgent ? maxToolRounds : 0, // No tools if not using agent
           options.outputFormat,
-          options.verbose
+          options.verbose,
+          useAgent
+        );
+        return;
+      } else if (stdinContent.trim()) {
+        // No -p but stdin provided: treat as headless prompt
+        fullPrompt = stdinContent;
+        useAgent = options.outputFormat !== 'stream-json';
+        await processPromptHeadless(
+          fullPrompt,
+          apiKey,
+          baseURL,
+          model,
+          useAgent ? maxToolRounds : 0,
+          options.outputFormat || 'text',
+          options.verbose,
+          useAgent
         );
         return;
       }
@@ -443,7 +540,7 @@ gitCommand
   )
   .option(
     "-m, --model <model>",
-    "AI model to use (e.g., grok-code-fast-1, grok-4-fast-reasoning, grok-2-1212) (or set GROK_MODEL env var)"
+    "AI model to use (e.g., grok-code-fast-1, grok-4-latest, grok-3-latest, grok-3-fast, grok-3-mini-fast) (or set GROK_MODEL env var)"
   )
   .option(
     "--max-tool-rounds <rounds>",
@@ -467,7 +564,7 @@ gitCommand
       // Get API key from options, environment, or user settings
       const apiKey = options.apiKey || loadApiKey();
       const baseURL = options.baseUrl || loadBaseURL();
-      const model = options.model || loadModel();
+      const model = loadModel(options.model);
       const maxToolRounds = parseInt(options.maxToolRounds) || 400;
 
       if (!apiKey) {
