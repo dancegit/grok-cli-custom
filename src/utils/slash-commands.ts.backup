@@ -1,0 +1,245 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { detectProject, ProjectInfo } from './project-detector.js';
+
+export interface SlashCommandResult {
+  success: boolean;
+  processedPrompt?: string;
+  error?: string;
+  availableCommands?: string[];
+}
+
+export class SlashCommandProcessor {
+  private workingDirectory: string;
+  private projectInfo: ProjectInfo;
+
+  constructor(workingDirectory: string = process.cwd()) {
+    this.workingDirectory = workingDirectory;
+    this.projectInfo = detectProject(workingDirectory);
+  }
+
+  /**
+   * Process a slash command and return the processed prompt
+   */
+  processSlashCommand(input: string): SlashCommandResult {
+    // Check if input starts with /
+    if (!input.startsWith('/')) {
+      return {
+        success: false,
+        error: 'Not a slash command - does not start with /'
+      };
+    }
+
+    // Parse command and arguments
+    const parts = input.slice(1).trim().split(/\s+/);
+    const commandName = parts[0];
+    const args = parts.slice(1).join(' ');
+
+    if (!commandName) {
+      return {
+        success: false,
+        error: 'Invalid slash command format. Use: /command [arguments]'
+      };
+    }
+
+    // Find command file
+    const commandFile = this.findCommandFile(commandName);
+    if (!commandFile) {
+      const availableCommands = this.getAvailableCommands();
+      return {
+        success: false,
+        error: `Slash command '/${commandName}' not found.\nAvailable commands: ${availableCommands.join(', ')}\nCreate .claude/commands/${commandName}.md to define this command.`,
+        availableCommands
+      };
+    }
+
+    // Read and process template
+    try {
+      const template = fs.readFileSync(commandFile, 'utf-8');
+      const processedPrompt = this.processTemplate(template, args);
+
+      return {
+        success: true,
+        processedPrompt
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Failed to process command template: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Find command file by name, checking various locations
+   */
+  private findCommandFile(commandName: string): string | null {
+    const claudeDir = path.join(this.workingDirectory, '.claude');
+    const commandsDir = path.join(claudeDir, 'commands');
+
+    // Check if .claude/commands exists
+    if (!fs.existsSync(commandsDir)) {
+      return null;
+    }
+
+    // Direct file match
+    const directPath = path.join(commandsDir, `${commandName}.md`);
+    if (fs.existsSync(directPath)) {
+      return directPath;
+    }
+
+    // Check subdirectories recursively
+    return this.findInSubdirectories(commandsDir, commandName);
+  }
+
+  /**
+   * Recursively search for command file in subdirectories
+   */
+  private findInSubdirectories(dir: string, commandName: string): string | null {
+    try {
+      const items = fs.readdirSync(dir);
+
+      for (const item of items) {
+        const fullPath = path.join(dir, item);
+        const stat = fs.statSync(fullPath);
+
+        if (stat.isDirectory()) {
+          // Recurse into subdirectory
+          const found = this.findInSubdirectories(fullPath, commandName);
+          if (found) return found;
+        } else if (stat.isFile() && item === `${commandName}.md`) {
+          return fullPath;
+        }
+      }
+    } catch (error) {
+      // Ignore errors
+    }
+
+    return null;
+  }
+
+  /**
+   * Process template by substituting variables
+   */
+  private processTemplate(template: string, args: string): string {
+    let processed = template;
+
+    // Substitute $ARGUMENT and $ARGUMENTS
+    processed = processed.replace(/\$ARGUMENTS/g, args);
+    processed = processed.replace(/\$ARGUMENT/g, args);
+
+    // Substitute TAC variables
+    processed = this.substituteTACVariables(processed);
+
+    return processed;
+  }
+
+  /**
+   * Substitute TAC-specific variables based on project detection
+   */
+  private substituteTACVariables(template: string): string {
+    let processed = template;
+
+    // Basic command and project info variables
+    const varMap: { [key: string]: string } = {
+      "$TEST_CMD": this.projectInfo.testCommand,
+      "$BUILD_CMD": this.projectInfo.buildCommand,
+      "$LINT_CMD": this.projectInfo.lintCommand || "echo \"No lint command configured\"",
+      "$INSTALL_CMD": this.projectInfo.installCommand,
+      "$RUN_CMD": this.projectInfo.runCommand,
+      "$LANGUAGE": this.projectInfo.language,
+      "$PACKAGE_MANAGER": this.projectInfo.packageManager || "unknown",
+      "$FRAMEWORK": this.projectInfo.framework || "none",
+    };
+
+    // Apply substitutions
+    for (const [variable, value] of Object.entries(varMap)) {
+      processed = processed.replace(new RegExp(variable.replace("$", "\\$"), "g"), value);
+    }
+
+    return processed;
+  }
+
+  /**
+   * Get list of available commands
+   */
+  private getAvailableCommands(): string[] {
+    const commandsDir = path.join(this.workingDirectory, '.claude', 'commands');
+
+    if (!fs.existsSync(commandsDir)) {
+      return [];
+    }
+
+    const commands: string[] = [];
+
+    try {
+      this.collectCommandsFromDirectory(commandsDir, commands, '');
+    } catch (error) {
+      // Ignore errors
+    }
+
+    return commands.sort();
+  }
+
+  /**
+   * Recursively collect command names from directory
+   */
+  private collectCommandsFromDirectory(dir: string, commands: string[], prefix: string): void {
+    const items = fs.readdirSync(dir);
+
+    for (const item of items) {
+      const fullPath = path.join(dir, item);
+      const stat = fs.statSync(fullPath);
+
+      if (stat.isFile() && item.endsWith('.md')) {
+        const commandName = item.slice(0, -3); // Remove .md extension
+        commands.push(prefix + commandName);
+      } else if (stat.isDirectory()) {
+        // Recurse with updated prefix
+        this.collectCommandsFromDirectory(fullPath, commands, `${prefix}${item}/`);
+      }
+    }
+  }
+
+  /**
+   * Check if input is a slash command
+   */
+  isSlashCommand(input: string): boolean {
+    return input.startsWith('/');
+  }
+
+  /**
+   * Get project information
+   */
+  getProjectInfo(): ProjectInfo {
+    return this.projectInfo;
+  }
+}
+
+export function processSlashCommand(input: string, workingDirectory?: string): SlashCommandResult {
+  const processor = new SlashCommandProcessor(workingDirectory);
+  return processor.processSlashCommand(input);
+}
+
+export function isSlashCommand(input: string): boolean {
+  return input.startsWith('/');
+}
+/**
+ * Preprocess a prompt, handling slash commands if detected
+ * @param input The raw user input
+ * @param workingDirectory The working directory (defaults to cwd)
+ * @returns The processed prompt (slash command result or original input)
+ */
+export function preprocessPrompt(input: string, workingDirectory?: string): string {
+  if (input.startsWith("/")) {
+    const result = processSlashCommand(input, workingDirectory);
+    if (result.success && result.processedPrompt) {
+      return result.processedPrompt;
+    } else {
+      // If slash command processing fails, return the original input
+      // The error will be handled by the caller
+      return input;
+    }
+  }
+  return input;
+}

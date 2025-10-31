@@ -13,7 +13,6 @@ import {
   ConfirmationService,
   ConfirmationOptions,
 } from "../../utils/confirmation-service.js";
-import { preprocessPrompt } from "../../utils/slash-commands.js";
 import ApiKeyInput from "./api-key-input.js";
 import cfonts from "cfonts";
 
@@ -82,36 +81,27 @@ function ChatInterfaceWithAgent({
     console.log("    ");
 
     // Generate logo with margin to match Ink paddingX={2}
-    let logoLines: string[] = [];
-    try {
-      const logoOutput = cfonts.render("GROK", {
-        font: "3d",
-        align: "left",
-        colors: ["magenta", "gray"],
-        space: true,
-        maxLength: "0",
-        gradient: ["magenta", "cyan"],
-        independentGradient: false,
-        transitionGradient: true,
-        env: "node",
-      });
+    const logoOutput = cfonts.render("GROK", {
+      font: "3d",
+      align: "left",
+      colors: ["magenta", "gray"],
+      space: true,
+      maxLength: "0",
+      gradient: ["magenta", "cyan"],
+      independentGradient: false,
+      transitionGradient: true,
+      env: "node",
+    });
 
-      if (logoOutput && (logoOutput as any).string) {
-        logoLines = (logoOutput as any).string.split("\n");
+    // Add horizontal margin (2 spaces) to match Ink paddingX={2}
+    const logoLines = (logoOutput as any).string.split("\n");
+    logoLines.forEach((line: string) => {
+      if (line.trim()) {
+        console.log(" " + line); // Add 2 spaces for horizontal margin
       } else {
-        // Fallback: simple text logo if font rendering fails
-        logoLines = [
-          "  GROK",
-          ""
-        ];
+        console.log(line); // Keep empty lines as-is
       }
-    } catch (error) {
-      // Fallback: simple text logo if font rendering fails
-      logoLines = [
-        "  GROK",
-        ""
-      ];
-    }
+    });
 
     console.log(" "); // Spacing after logo
 
@@ -120,11 +110,10 @@ function ChatInterfaceWithAgent({
 
   // Process initial message if provided (streaming for faster feedback)
   useEffect(() => {
-    const processedInitialMessage = preprocessPrompt(initialMessage);
-    if (processedInitialMessage && agent) {
+    if (initialMessage && agent) {
       const userEntry: ChatEntry = {
         type: "user",
-        content: processedInitialMessage,
+        content: initialMessage,
         timestamp: new Date(),
       };
       setChatHistory([userEntry]);
@@ -135,7 +124,7 @@ function ChatInterfaceWithAgent({
 
         try {
           let streamingEntry: ChatEntry | null = null;
-          for await (const chunk of agent.processUserMessageStream(processedInitialMessage)) {
+          for await (const chunk of agent.processUserMessageStream(initialMessage)) {
             switch (chunk.type) {
               case "content":
                 if (chunk.content) {

@@ -1,17 +1,25 @@
 #!/usr/bin/env node
+// Force Bun to bundle yoga.wasm
+//
+//
+import "yoga-wasm-web/dist/yoga.wasm";
 import React from "react";
 import { render } from "ink";
 import { program } from "commander";
 import * as dotenv from "dotenv";
 import { GrokAgent } from "./agent/grok-agent.js";
 import ChatInterface from "./ui/components/chat-interface.js";
-import { getSettingsManager } from "./utils/settings-manager.js";
+import { getSettingsManager } from "./utils/settings-manager";
 import { ConfirmationService } from "./utils/confirmation-service.js";
-import { createMCPCommand } from "./commands/mcp.js";
+import { preprocessPrompt } from "./utils/slash-commands.js";
 import type { ChatCompletionMessageParam } from "openai/resources/chat";
 import * as fs from "fs";
 import { GrokClient } from "./grok/client.js";
+import { createMCPCommand } from "./commands/mcp.js";
 
+
+//console.log("LOCAL DEV BUILD v0.0.35 - RUNNING!");
+const packageJson = require('../package.json');
 // Load environment variables
 dotenv.config();
 
@@ -280,19 +288,19 @@ async function processPromptHeadless(
   
   try {
     // Validate output format
-    const validFormats = ['text', 'json', 'stream-json'];
+    const validFormats = ["text", "json", "stream-json"];
     if (outputFormat && !validFormats.includes(outputFormat)) {
-      throw new Error(`Invalid output-format: ${outputFormat}. Supported formats: ${validFormats.join(', ')}`);
+      throw new Error(`Invalid output-format: ${outputFormat}. Supported formats: ${validFormats.join(", ")}`);
     }
 
     if (verbose) {
-      console.error(`🤖 Processing prompt with model: ${model || 'default'}`);
+      console.error(`🤖 Processing prompt with model: ${model || "default"}`);
       console.error(`📝 Prompt: ${prompt}`);
     }
 
     let client: GrokClient;
-    let messages: ChatCompletionMessageParam[] = [{ role: "user", content: prompt }];
-
+    let processedPrompt = preprocessPrompt(prompt);
+    let messages: ChatCompletionMessageParam[] = [{ role: "user", content: processedPrompt }];
     // Append system prompt if provided (only for -p mode)
     if (appendSystemPrompt) {
       messages.unshift({ role: "system", content: appendSystemPrompt });
@@ -315,7 +323,7 @@ async function processPromptHeadless(
       }
 
       // Process the user message with agent (tools enabled)
-      const chatEntries = await agent.processUserMessage(prompt);
+      const chatEntries = await agent.processUserMessage(processedPrompt);
 
       if (verbose) {
         console.error(`📊 Generated ${chatEntries.length} chat entries`);
@@ -366,7 +374,7 @@ async function processPromptHeadless(
         }
       }
 
-      client = agent['grokClient']; // Access private client if needed, but for output we use messages
+      client = agent["grokClient"]; // Access private client if needed, but for output we use messages
     } else {
       // Direct client call without agent (no tools, for streaming)
       client = new GrokClient(apiKey, model, baseURL);
@@ -386,39 +394,39 @@ async function processPromptHeadless(
     // Max turns is now handled by the agent
 
     // Output based on format
-    if (outputFormat === 'stream-json') {
+    if (outputFormat === "stream-json") {
       if (!useAgent) {
         // Stream directly from API
         const stream = await client.chatStream(messages, [], model);
         for await (const chunk of stream) {
-          process.stdout.write(JSON.stringify(chunk) + '\n');
+          process.stdout.write(JSON.stringify(chunk) + "\n");
         }
       } else {
         // Fallback for agent: output messages as JSON lines (non-streaming)
-        console.error('⚠️ Streaming not supported with tools/agent; falling back to JSON lines');
+        console.error("⚠️ Streaming not supported with tools/agent; falling back to JSON lines");
         for (const message of messages) {
-          process.stdout.write(JSON.stringify(message) + '\n');
+          process.stdout.write(JSON.stringify(message) + "\n");
         }
       }
-    } else if (outputFormat === 'json') {
+    } else if (outputFormat === "json") {
       // Full conversation as JSON
       if (verbose) {
-        console.error('📤 Outputting full conversation as JSON');
+        console.error("📤 Outputting full conversation as JSON");
       }
       console.log(JSON.stringify({ messages }, null, 2));
     } else {
       // text: output final assistant content
-      const lastAssistant = messages.filter(m => m.role === 'assistant').pop();
-      const content = lastAssistant?.content || 'No response generated.';
+      const lastAssistant = messages.filter(m => m.role === "assistant").pop();
+      const content = lastAssistant?.content || "No response generated.";
       if (verbose) {
-        console.error('📤 Outputting response text');
+        console.error("📤 Outputting response text");
       }
       console.log(content);
     }
   } catch (error: any) {
     // Output error in OpenAI compatible format
     const errorMsg = { role: "assistant", content: `Error: ${error.message}` };
-    if (outputFormat === 'stream-json' || outputFormat === 'json') {
+    if (outputFormat === "stream-json" || outputFormat === "json") {
       console.log(JSON.stringify(errorMsg));
     } else {
       console.log(errorMsg.content);
@@ -428,14 +436,16 @@ async function processPromptHeadless(
     }
     process.exit(1);
   }
+  // }
 }
-
 program
   .name("grok")
   .description(
     "A conversational AI CLI tool powered by Grok with text editor capabilities"
   )
-  .version("1.0.1")
+  //.version("1.0.1")
+  //require('../package.json').version
+  .version(packageJson.version)
   .argument("[message...]", "Initial message to send to Grok (for interactive mode) or query (for print mode if no --prompt)")
   .option("-d, --directory <dir>", "set working directory", process.cwd())
   .option("-k, --api-key <key>", "Grok API key (or set GROK_API_KEY env var)")
@@ -467,7 +477,7 @@ program
   )
   .option(
     "--output-format <format>",
-    "output format for headless mode (default: text, supported: text, json, stream-json)",
+    "output format for headless mode (default: json, supported: text, json, stream-json)",
     "text"
   )
   .option("--verbose", "enable verbose output and logging")

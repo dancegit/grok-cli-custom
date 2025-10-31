@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Text, useInput, useApp } from "ink";
 import { GrokAgent } from "../../agent/grok-agent.js";
-import { getSettingsManager } from "../../utils/settings-manager.js";
+import { getSettingsManager } from "../../utils/settings-manager";
 
 interface ApiKeyInputProps {
   onApiKeySet: (agent: GrokAgent) => void;

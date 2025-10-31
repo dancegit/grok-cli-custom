@@ -19,7 +19,7 @@ import { ToolResult } from "../types/index.js";
 import { EventEmitter } from "events";
 import { createTokenCounter, TokenCounter } from "../utils/token-counter.js";
 import { loadCustomInstructions } from "../utils/custom-instructions.js";
-import { getSettingsManager } from "../utils/settings-manager.js";
+import { getSettingsManager } from "../utils/settings-manager";
 
 export interface ChatEntry {
   type: "user" | "assistant" | "tool_result" | "tool_call";

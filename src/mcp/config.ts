@@ -1,4 +1,4 @@
-import { getSettingsManager } from "../utils/settings-manager.js";
+import { getSettingsManager } from "../utils/settings-manager";
 import { MCPServerConfig } from "./client.js";
 
 export interface MCPConfig {

@@ -182,7 +182,7 @@ export function useInputHandler({
     if (userInput.trim()) {
       const directCommandResult = await handleDirectCommand(userInput);
       if (!directCommandResult) {
-        await processUserMessage(processedInput);
+        await processUserMessage(userInput);
       }
     }
   };
@@ -222,18 +222,14 @@ export function useInputHandler({
     handleInputChange(input);
   }, [input]);
 
-  // Dynamic command suggestions from .claude/commands/* directory
-  const slashCommandProcessor = useMemo(() => new SlashCommandProcessor(process.cwd()), []);
-  const dynamicCommandSuggestions = useMemo(() => slashCommandProcessor.getCommandSuggestions(), [slashCommandProcessor]);
-
-  const commandSuggestions: CommandSuggestion[] = useMemo(() => [
+  const commandSuggestions: CommandSuggestion[] = [
     { command: "/help", description: "Show help information" },
+    { command: "/prime", description: "Prime context for codebase analysis" },
     { command: "/clear", description: "Clear chat history" },
     { command: "/models", description: "Switch Grok Model" },
     { command: "/commit-and-push", description: "AI commit & push to remote" },
     { command: "/exit", description: "Exit the application" },
-    ...dynamicCommandSuggestions, // Add dynamically loaded commands
-  ], [dynamicCommandSuggestions]);
+  ];
 
   // Load models from configuration with fallback to defaults
   const availableModels: ModelOption[] = useMemo(() => {
