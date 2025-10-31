@@ -274,10 +274,10 @@ async function processPromptHeadless(
   dangerouslySkipPermissions?: boolean
 ): Promise<void> {
   // NEW: Debug logging (remove after verifying)
-  if (verbose) {
-    console.error(`[DEBUG] Options parsed: outputFormat=${outputFormat}, appendSystemPrompt=${!!appendSystemPrompt}, useAgent=${useAgent}`);
-    if (appendSystemPrompt) console.error(`[DEBUG] System prompt: ${appendSystemPrompt}`);
-  }
+  // if (verbose) {
+  //   console.error(`[DEBUG] Options parsed: outputFormat=${outputFormat}, appendSystemPrompt=${!!appendSystemPrompt}, useAgent=${useAgent}`);
+  //   if (appendSystemPrompt) console.error(`[DEBUG] System prompt: ${appendSystemPrompt}`);
+  // }
   
   try {
     if (verbose) {
