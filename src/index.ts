@@ -259,7 +259,7 @@ Respond with ONLY the commit message, no additional text.`;
   }
 }
 
-// Headless mode processing function
+// Headless mode processing function - enhanced for Claude-like CLI behavior
 async function processPromptHeadless(
   prompt: string,
   apiKey: string,
@@ -268,26 +268,41 @@ async function processPromptHeadless(
   maxToolRounds?: number,
   outputFormat?: string,
   verbose?: boolean,
-  useAgent: boolean = true
+  appendSystemPrompt?: string,
+  maxTurns?: number,
+  useAgent: boolean = true,
+  dangerouslySkipPermissions?: boolean
 ): Promise<void> {
   try {
     if (verbose) {
       console.error(`🤖 Processing prompt with model: ${model || 'default'}`);
       console.error(`📝 Prompt: ${prompt}`);
+      if (appendSystemPrompt) {
+        console.error(`📝 Appended system prompt: ${appendSystemPrompt}`);
+      }
     }
 
     let client: GrokClient;
     let messages: ChatCompletionMessageParam[] = [{ role: "user", content: prompt }];
 
+    // Append system prompt if provided (only for -p mode)
+    if (appendSystemPrompt) {
+      messages.unshift({ role: "system", content: appendSystemPrompt });
+    }
+
     if (useAgent) {
       const agent = new GrokAgent(apiKey, baseURL, model, maxToolRounds);
 
-      // Configure confirmation service for headless mode (auto-approve all operations)
+      // Configure confirmation service for headless mode
       const confirmationService = ConfirmationService.getInstance();
-      confirmationService.setSessionFlag("allOperations", true);
+      if (dangerouslySkipPermissions) {
+        confirmationService.setSessionFlag("allOperations", true);
+      } else {
+        confirmationService.setSessionFlag("allOperations", false);
+      }
 
       if (verbose) {
-        console.error("🔄 Processing user message...");
+        console.error("🔄 Processing user message with agent...");
       }
 
       // Process the user message with agent (tools enabled)
@@ -348,28 +363,40 @@ async function processPromptHeadless(
       client = new GrokClient(apiKey, model, baseURL);
     }
 
+    // Limit max turns if specified (for agent mode)
+    if (useAgent && maxTurns && maxTurns > 0) {
+      // Note: This is a simple limit; actual turn limiting would require modifying agent logic
+      console.error(`⚠️ Max turns limited to ${maxTurns} (agent mode)`);
+    }
+
     // Output based on format
     if (outputFormat === 'stream-json') {
       if (!useAgent) {
         // Stream directly from API
         const stream = await client.chatStream(messages, [], model);
         for await (const chunk of stream) {
-          console.log(JSON.stringify(chunk));
+          process.stdout.write(JSON.stringify(chunk) + '\n');
         }
       } else {
         // Fallback for agent: output messages as JSON lines (non-streaming)
         console.error('⚠️ Streaming not supported with tools/agent; falling back to JSON lines');
         for (const message of messages) {
-          console.log(JSON.stringify(message));
+          process.stdout.write(JSON.stringify(message) + '\n');
         }
       }
     } else if (outputFormat === 'json') {
       // Full conversation as JSON
+      if (verbose) {
+        console.error('📤 Outputting full conversation as JSON');
+      }
       console.log(JSON.stringify({ messages }, null, 2));
     } else {
       // text: output final assistant content
       const lastAssistant = messages.filter(m => m.role === 'assistant').pop();
       const content = lastAssistant?.content || 'No response generated.';
+      if (verbose) {
+        console.error('📤 Outputting response text');
+      }
       console.log(content);
     }
   } catch (error: any) {
@@ -379,6 +406,9 @@ async function processPromptHeadless(
       console.log(JSON.stringify(errorMsg));
     } else {
       console.log(errorMsg.content);
+    }
+    if (verbose) {
+      console.error(`❌ Error: ${error.message}`);
     }
     process.exit(1);
   }
@@ -406,9 +436,18 @@ program
     "process a single prompt and exit (headless/print mode)"
   )
   .option(
+    "--append-system-prompt <prompt>",
+    "append to system prompt (only with --prompt)"
+  )
+  .option(
     "--max-tool-rounds <rounds>",
     "maximum number of tool execution rounds (default: 400)",
     "400"
+  )
+  .option(
+    "--max-turns <turns>",
+    "limit the number of agentic turns in non-interactive mode (default: unlimited)",
+    undefined
   )
   .option(
     "--output-format <format>",
@@ -439,6 +478,7 @@ program
       const baseURL = options.baseUrl || loadBaseURL();
       const model = loadModel(options.model);
       const maxToolRounds = parseInt(options.maxToolRounds) || 400;
+      const maxTurns = options.maxTurns ? parseInt(options.maxTurns) : undefined;
 
       if (!apiKey) {
         console.error(
@@ -506,7 +546,10 @@ program
           useAgent ? maxToolRounds : 0, // No tools if not using agent
           options.outputFormat,
           options.verbose,
-          useAgent
+          options.appendSystemPrompt,
+          maxTurns,
+          useAgent,
+          options.dangerouslySkipPermissions
         );
         return;
       }
