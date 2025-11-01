@@ -15,45 +15,50 @@ export class TextEditorTool {
       const resolvedPath = path.resolve(filePath);
 
       try {
+        // Check if file/directory exists
         await fs.access(resolvedPath);
-        const stats = await fs.stat(resolvedPath);
+        
+        // Try to read as file first
+        try {
+          const content = await fs.readFile(resolvedPath, "utf-8");
+          const lines = content.split("\n");
 
-        if (stats.isDirectory()) {
-          const files = await fs.readdir(resolvedPath);
-          return {
-            success: true,
-            output: `Directory contents of ${filePath}:\n${files.join("\n")}`,
-          };
-        }
+          if (viewRange) {
+            const [start, end] = viewRange;
+            const selectedLines = lines.slice(start - 1, end);
+            const numberedLines = selectedLines
+              .map((line, idx) => `${start + idx}: ${line}`)
+              .join("\n");
 
-        const content = await fs.readFile(resolvedPath, "utf-8");
-        const lines = content.split("\n");
+            return {
+              success: true,
+              output: `Lines ${start}-${end} of ${filePath}:\n${numberedLines}`,
+            };
+          }
 
-        if (viewRange) {
-          const [start, end] = viewRange;
-          const selectedLines = lines.slice(start - 1, end);
-          const numberedLines = selectedLines
-            .map((line, idx) => `${start + idx}: ${line}`)
+          const totalLines = lines.length;
+          const displayLines = totalLines > 10 ? lines.slice(0, 10) : lines;
+          const numberedLines = displayLines
+            .map((line, idx) => `${idx + 1}: ${line}`)
             .join("\n");
+          const additionalLinesMessage =
+            totalLines > 10 ? `\n... +${totalLines - 10} lines` : "";
 
           return {
             success: true,
-            output: `Lines ${start}-${end} of ${filePath}:\n${numberedLines}`,
+            output: `Contents of ${filePath}:\n${numberedLines}${additionalLinesMessage}`,
           };
+        } catch (readError: any) {
+          // If read failed because it's a directory, list directory contents
+          if (readError.code === 'EISDIR' || readError.message?.includes('directory')) {
+            const files = await fs.readdir(resolvedPath);
+            return {
+              success: true,
+              output: `Directory contents of ${filePath}:\n${files.join("\n")}`,
+            };
+          }
+          throw readError;
         }
-
-        const totalLines = lines.length;
-        const displayLines = totalLines > 10 ? lines.slice(0, 10) : lines;
-        const numberedLines = displayLines
-          .map((line, idx) => `${idx + 1}: ${line}`)
-          .join("\n");
-        const additionalLinesMessage =
-          totalLines > 10 ? `\n... +${totalLines - 10} lines` : "";
-
-        return {
-          success: true,
-          output: `Contents of ${filePath}:\n${numberedLines}${additionalLinesMessage}`,
-        };
       } catch (accessError) {
         return {
           success: false,
@@ -77,16 +82,9 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      try {
-        await fs.access(resolvedPath);
-      } catch {
-        return {
-          success: false,
-          error: `File not found: ${filePath}`,
-        };
-      }
-
-      const content = await fs.readFile(resolvedPath, "utf-8");
+      const content = await fs.readFile(resolvedPath, "utf-8").catch((error) => {
+        throw new Error(`File not found: ${filePath}`);
+      });
 
       if (!content.includes(oldStr)) {
         if (oldStr.includes('\n')) {
@@ -238,16 +236,9 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      try {
-        await fs.access(resolvedPath);
-      } catch {
-        return {
-          success: false,
-          error: `File not found: ${filePath}`,
-        };
-      }
-
-      const fileContent = await fs.readFile(resolvedPath, "utf-8");
+      const fileContent = await fs.readFile(resolvedPath, "utf-8").catch((error) => {
+        throw new Error(`File not found: ${filePath}`);
+      });
       const lines = fileContent.split("\n");
       
       if (startLine < 1 || startLine > lines.length) {
@@ -327,16 +318,9 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      try {
-        await fs.access(resolvedPath);
-      } catch {
-        return {
-          success: false,
-          error: `File not found: ${filePath}`,
-        };
-      }
-
-      const fileContent = await fs.readFile(resolvedPath, "utf-8");
+      const fileContent = await fs.readFile(resolvedPath, "utf-8").catch((error) => {
+        throw new Error(`File not found: ${filePath}`);
+      });
       const lines = fileContent.split("\n");
 
       lines.splice(insertLine - 1, 0, content);
