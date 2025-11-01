@@ -1,30 +1,21 @@
 import { TextEditorTool } from "./text-editor.js";
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { jest } from "@jest/globals";
 import fs from "fs-extra";
 import * as path from "path";
 
 // Mock fs-extra and path
-mock.module("fs-extra", () => ({
-  pathExists: mock(),
-  stat: mock(),
-  readFile: mock(),
-  readdir: mock(),
-  ensureDir: mock(),
-  writeFile: mock(),
-}));
-mock.module("path", () => ({
-  dirname: mock(),
-}));
+jest.mock("fs-extra");
+jest.mock("path");
 
-const mockedFs = fs as any;
-const mockedPath = path as any;
+const mockedFs = fs as jest.Mocked<typeof fs>;
+const mockedPath = path as jest.Mocked<typeof path>;
 
 describe("TextEditorTool", () => {
   let tool: TextEditorTool;
 
   beforeEach(() => {
     tool = new TextEditorTool();
-    
+    jest.clearAllMocks();
   });
 
   describe("view", () => {
