@@ -1,7 +1,3 @@
-Here's a **clean, professional, well-structured, and fully deduplicated** version of your `README.md` — optimized for clarity, usability, and developer experience.
-
----
-
 # Grok CLI  
 **A conversational AI CLI powered by Grok with intelligent file editing, tool usage, and automation.**
 
