@@ -240,7 +240,7 @@ async function processPromptHeadless(
   appendSystemPrompt?: string,
   maxTurns?: number,
   useAgent: boolean = true,
-  dangerouslySkipPermissions: boolean = false
+  dangerouslySkipPermissions: boolean = true
 ): Promise<void> {
   try {
     const validFormats = ["text", "json", "stream-json", "jsonl"];
