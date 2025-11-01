@@ -1,4 +1,4 @@
-import { program, loadModel } from '../dist/index.js'; // Use built version
+import { program, loadModel } from '../src/index.ts'; // Use built version
 import { expect, test } from 'bun:test'; // Using Bun's test runner
 import { Command } from 'commander';
 

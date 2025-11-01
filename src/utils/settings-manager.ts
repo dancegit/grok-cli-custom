@@ -14,8 +14,21 @@ export interface UserSettings {
 }
 
 /**
+ * Telemetry settings
+ */
+export interface TelemetrySettings {
+  enabled?: boolean;
+  exporter?: string;
+  endpoint?: string;
+  service_name?: string;
+  service_version?: string;
+  trace_sample_ratio?: number;
+}
+
+/**
  * Project-level settings stored in .grok/settings.json
  * These are project-specific settings
+telemetry?: TelemetrySettings; // Telemetry configuration
  */
 export interface ProjectSettings {
   model?: string; // Current model for this project

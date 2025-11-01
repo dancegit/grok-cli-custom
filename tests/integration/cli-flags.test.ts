@@ -20,12 +20,12 @@ if (!REAL_API_KEY) {
 }
 
 // Test binary path
-const GROK_BINARY = path.join(process.cwd(), 'dist', 'index.js');
+const GROK_BINARY = path.join(process.cwd(), 'dist', 'grok.js');
 
 // Ensure build directory exists
 beforeAll(async () => {
   await buildProject();
-  if (!fs.existsSync(path.dirname(GROK_BINARY))) {
+  if (!fs.existsSync(GROK_BINARY)) {
     throw new Error('Build failed: dist/index.js not found');
   }
   if (!REAL_API_KEY) {
@@ -40,7 +40,7 @@ afterAll(() => {
 
 // Helper to run grok CLI and capture output (FIX: Separate stdout/stderr pipes)
 async function runGrokCli(args: string[], input?: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  const proc = execa('node', [GROK_BINARY, ...args], {
+  const proc = execa('bun', [GROK_BINARY, ...args], {
     stdout: 'pipe',
     stderr: 'pipe',
     stdin: input ? 'pipe' : 'inherit',

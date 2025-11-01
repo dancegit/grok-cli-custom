@@ -159,6 +159,10 @@ Add to `~/.grok/user-settings.json`:
   "baseURL": "https://your-custom-endpoint.com/v1"
 }
 
+## Telemetry
+
+Grok CLI supports OpenTelemetry integration for tracing and monitoring agent activities.
+
 ### Managing Telemetry
 
 ```bash
@@ -221,6 +225,10 @@ This file stores **global settings** that apply across all projects. These setti
   ]
 }
 
+## Telemetry
+
+Grok CLI supports OpenTelemetry integration for tracing and monitoring agent activities.
+
 ### Managing Telemetry
 
 ```bash
@@ -275,6 +283,10 @@ This file stores **project-specific settings** in your current working directory
     }
   }
 }
+
+## Telemetry
+
+Grok CLI supports OpenTelemetry integration for tracing and monitoring agent activities.
 
 ### Managing Telemetry
 
@@ -341,6 +353,10 @@ This means you can have different models for different projects while maintainin
     "meta-llama/llama-3.1-70b-instruct"
   ]
 }
+
+## Telemetry
+
+Grok CLI supports OpenTelemetry integration for tracing and monitoring agent activities.
 
 ### Managing Telemetry
 
@@ -513,6 +529,10 @@ Add to `~/.grok/user-settings.json`:
   "apiKey": "your_api_key_here",
   "defaultModel": "grok-code-fast-1"
 }
+
+## Telemetry
+
+Grok CLI supports OpenTelemetry integration for tracing and monitoring agent activities.
 
 ### Managing Telemetry
 
@@ -884,39 +904,6 @@ grok mcp add-json my-server '{
   }
 }'
 ```
-
-### Managing Telemetry
-
-```bash
-# Enable telemetry
-grok telemetry enable
-
-# Disable telemetry
-grok telemetry disable
-```
-
-### Telemetry Configuration
-
-Telemetry settings can be configured in your project `.grok/settings.json`:
-
-```json
-{
-  "telemetry": {
-    "enabled": true,
-    "exporter": "otlp",
-    "endpoint": "http://localhost:4317",
-    "service_name": "grok-agent",
-    "service_version": "1.0.0",
-    "trace_sample_ratio": 1.0
-  }
-}
-```
-
-When enabled, telemetry tracks:
-- Session start/end times
-- Agent outputs with model, token usage, and duration
-- Tool executions and performance metrics
-
 
 ## Development
 

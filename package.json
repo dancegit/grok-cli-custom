@@ -1,46 +1,24 @@
 {
   "name": "@vibe-kit/grok-cli",
   "version": "0.0.35",
-  "description": "An open-source AI agent that brings the power of Grok directly into your terminal.",
-  "type": "module",
-  "main": "dist/index.js",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
   "bin": {
-    "grok": "dist/index.js"
+    "grok": "dist/grok.js"
   },
   "scripts": {
-    "build": "tsc",
-    "build:bun": "bun run tsc",
+    "build": "bun build ./src/index.ts --outfile=dist/grok.js --target=bun --external=yoga-wasm-web && chmod +x dist/grok.js",
+    "build:watch": "watchexec -r -e ts,tsx -- \"bun run build\"",
     "dev": "bun run src/index.ts",
-    "dev:node": "tsx src/index.ts",
-    "start": "node dist/index.js",
-    "start:bun": "bun run dist/index.js",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "test:integration": "bun test tests/integration",
-    "test:watch": "bun test --watch",
-    "install:bun": "bun install"
+    "start": "bun dist/grok.js"
   },
-  "keywords": [
-    "cli",
-    "agent",
-    "text-editor",
-    "grok",
-    "ai"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",
-    "@vibe-kit/grok-cli": ".",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.207.0",
+    "@opentelemetry/resources": "^2.2.0",
+    "@opentelemetry/sdk-node": "^0.207.0",
+    "@opentelemetry/semantic-conventions": "^1.37.0",
     "axios": "^1.7.0",
-    "cfonts": "^3.3.0",
+    "cfonts": "^3.3.1",
     "chalk": "^5.3.0",
     "commander": "^12.0.0",
     "dotenv": "^16.4.0",
@@ -52,7 +30,9 @@
     "openai": "^5.10.1",
     "react": "^18.3.1",
     "ripgrep-node": "^1.0.0",
-    "tiktoken": "^1.0.21"
+    "tiktoken": "^1.0.21",
+    "uuid": "^13.0.0",
+    "yoga-wasm-web": "^0.3.3"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.2",
@@ -65,10 +45,6 @@
     "tsx": "^4.0.0",
     "typescript": "^5.3.3"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "preferGlobal": true,
   "optionalDependencies": {
     "react-devtools-core": "^7.0.1"
   }

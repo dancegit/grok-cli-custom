@@ -1,4 +1,5 @@
 import { GrokClient, GrokMessage, GrokToolCall } from "../grok/client.js";
+import { telemetryManager } from "../utils/telemetry.js";
 import {
   GROK_TOOLS,
   addMCPToolsToGrokTools,
@@ -68,7 +69,7 @@ export class GrokAgent extends EventEmitter {
     const savedModel = manager.getCurrentModel();
     const modelToUse = model || savedModel || "grok-code-fast-1";
     this.maxToolRounds = maxToolRounds || 400;
-    this.maxTurns = maxTurns || 10; // Default reasonable limit
+    this.maxTurns = maxTurns || 500;
     this.grokClient = new GrokClient(apiKey, modelToUse, baseURL);
     this.textEditor = new TextEditorTool();
     this.morphEditor = process.env.MORPH_API_KEY ? new MorphEditorTool() : null;
@@ -80,6 +81,9 @@ export class GrokAgent extends EventEmitter {
 
     // Initialize MCP servers if configured
     this.initializeMCP();
+
+    // Initialize telemetry
+    telemetryManager.init();
 
     // Load custom instructions
     const customInstructions = loadCustomInstructions();
@@ -134,8 +138,8 @@ TASK PLANNING WITH TODO LISTS:
 - Mark tasks as 'in_progress' when you start working on them (only one at a time)
 - Mark tasks as 'completed' immediately when finished
 - Use update_todo_list to track your progress throughout the task
-- Todo lists provide visual feedback with colors: ✅ Green (completed), 🔄 Cyan (in progress), ⏳ Yellow (pending)
-- Always create todos with priorities: 'high' (🔴), 'medium' (🟡), 'low' (🟢)
+- Todo lists provide visual feedback with colors: Green (completed), Cyan (in progress), Yellow (pending)
+- Always create todos with priorities: 'high' (red), 'medium' (yellow), 'low' (green)
 
 USER CONFIRMATION SYSTEM:
 File operations (create_file, str_replace_editor) and bash commands will automatically request user confirmation before execution. The confirmation system will show users the actual content or command before they decide. Users can choose to approve individual operations or approve all operations of that type for the session.
@@ -155,7 +159,6 @@ Current working directory: ${process.cwd()}`,
   }
 
   private async initializeMCP(): Promise<void> {
-    // Initialize MCP in the background without blocking
     Promise.resolve().then(async () => {
       try {
         const config = loadMCPConfig();
@@ -175,36 +178,19 @@ Current working directory: ${process.cwd()}`,
     return currentModel.toLowerCase().includes("grok");
   }
 
-  // Heuristic: enable web search only when likely needed
   private shouldUseSearchFor(message: string): boolean {
     const q = message.toLowerCase();
     const keywords = [
-      "today",
-      "latest",
-      "news",
-      "trending",
-      "breaking",
-      "current",
-      "now",
-      "recent",
-      "x.com",
-      "twitter",
-      "tweet",
-      "what happened",
-      "as of",
-      "update on",
-      "release notes",
-      "changelog",
-      "price",
+      "today", "latest", "news", "trending", "breaking", "current", "now",
+      "recent", "x.com", "twitter", "tweet", "what happened", "as of",
+      "update on", "release notes", "changelog", "price",
     ];
     if (keywords.some((k) => q.includes(k))) return true;
-    // crude date pattern (e.g., 2024/2025) may imply recency
     if (/(20\d{2})/.test(q)) return true;
     return false;
   }
 
   async processUserMessage(message: string): Promise<ChatEntry[]> {
-    // Add user message to conversation
     const userEntry: ChatEntry = {
       type: "user",
       content: message,
@@ -213,8 +199,10 @@ Current working directory: ${process.cwd()}`,
     this.chatHistory.push(userEntry);
     this.messages.push({ role: "user", content: message });
 
+    const startTime = Date.now();
+    const sessionId = telemetryManager.startSession();
     const newEntries: ChatEntry[] = [userEntry];
-    const maxToolRounds = this.maxToolRounds; // Prevent infinite loops
+    const maxToolRounds = this.maxToolRounds;
     let toolRounds = 0;
     let turns = 0;
 
@@ -229,24 +217,17 @@ Current working directory: ${process.cwd()}`,
           : { search_parameters: { mode: "off" } }
       );
 
-      // Agent loop - continue until no more tool calls or max rounds/turns reached
       while (toolRounds < maxToolRounds && turns < this.maxTurns) {
-        turns++; // Increment turn counter for each assistant response
+        turns++;
 
         const assistantMessage = currentResponse.choices[0]?.message;
-
         if (!assistantMessage) {
           throw new Error("No response from Grok");
         }
 
-        // Handle tool calls
-        if (
-          assistantMessage.tool_calls &&
-          assistantMessage.tool_calls.length > 0
-        ) {
+        if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
           toolRounds++;
 
-          // Add assistant message with tool calls
           const assistantEntry: ChatEntry = {
             type: "assistant",
             content: assistantMessage.content || "Using tools to help you...",
@@ -256,14 +237,12 @@ Current working directory: ${process.cwd()}`,
           this.chatHistory.push(assistantEntry);
           newEntries.push(assistantEntry);
 
-          // Add assistant message to conversation
           this.messages.push({
             role: "assistant",
             content: assistantMessage.content || "",
             tool_calls: assistantMessage.tool_calls,
           } as any);
 
-          // Create initial tool call entries to show tools are being executed
           assistantMessage.tool_calls.forEach((toolCall) => {
             const toolCallEntry: ChatEntry = {
               type: "tool_call",
@@ -275,11 +254,9 @@ Current working directory: ${process.cwd()}`,
             newEntries.push(toolCallEntry);
           });
 
-          // Execute tool calls and update the entries
           for (const toolCall of assistantMessage.tool_calls) {
             const result = await this.executeTool(toolCall);
 
-            // Update the existing tool_call entry with the result
             const entryIndex = this.chatHistory.findIndex(
               (entry) =>
                 entry.type === "tool_call" && entry.toolCall?.id === toolCall.id
@@ -296,18 +273,15 @@ Current working directory: ${process.cwd()}`,
               };
               this.chatHistory[entryIndex] = updatedEntry;
 
-              // Also update in newEntries for return value
               const newEntryIndex = newEntries.findIndex(
                 (entry) =>
-                  entry.type === "tool_call" &&
-                  entry.toolCall?.id === toolCall.id
+                  entry.type === "tool_call" && entry.toolCall?.id === toolCall.id
               );
               if (newEntryIndex !== -1) {
                 newEntries[newEntryIndex] = updatedEntry;
               }
             }
 
-            // Add tool result to messages with proper format (needed for AI context)
             this.messages.push({
               role: "tool",
               content: result.success
@@ -317,7 +291,6 @@ Current working directory: ${process.cwd()}`,
             });
           }
 
-          // Get next response - this might contain more tool calls
           currentResponse = await this.grokClient.chat(
             this.messages,
             tools,
@@ -327,7 +300,6 @@ Current working directory: ${process.cwd()}`,
               : { search_parameters: { mode: "off" } }
           );
         } else {
-          // No more tool calls, add final response
           const finalEntry: ChatEntry = {
             type: "assistant",
             content:
@@ -341,7 +313,7 @@ Current working directory: ${process.cwd()}`,
             content: assistantMessage.content || "",
           });
           newEntries.push(finalEntry);
-          break; // Exit the loop
+          break;
         }
       }
 
@@ -359,16 +331,32 @@ Current working directory: ${process.cwd()}`,
       if (turns >= this.maxTurns) {
         const warningEntry: ChatEntry = {
           type: "assistant",
-          content:
-            `Maximum turns (${this.maxTurns}) reached. Stopping to prevent infinite loops.`,
+          content: `Maximum turns (${this.maxTurns}) reached. Stopping to prevent infinite loops.`,
           timestamp: new Date(),
         };
         this.chatHistory.push(warningEntry);
         newEntries.push(warningEntry);
       }
 
+      // Track telemetry
+      const duration = Date.now() - startTime;
+      const lastAssistant = newEntries.filter(e => e.type === "assistant").pop();
+      if (lastAssistant) {
+        const tokensUsed = Math.ceil(lastAssistant.content.length / 4);
+        telemetryManager.trackAgentOutput({
+          sessionId,
+          output: lastAssistant.content,
+          model: this.getCurrentModel(),
+          tokens_used: tokensUsed,
+          duration_ms: duration,
+        });
+      }
+
+      telemetryManager.endSession();
       return newEntries;
     } catch (error: any) {
+      telemetryManager.endSession();
+
       const errorEntry: ChatEntry = {
         type: "assistant",
         content: `Sorry, I encountered an error: ${error.message}`,
@@ -385,7 +373,6 @@ Current working directory: ${process.cwd()}`,
       for (const [key, value] of Object.entries(delta)) {
         if (acc[key] === undefined || acc[key] === null) {
           acc[key] = value;
-          // Clean up index properties from tool calls
           if (Array.isArray(acc[key])) {
             for (const arr of acc[key]) {
               delete arr.index;
@@ -412,10 +399,8 @@ Current working directory: ${process.cwd()}`,
   async *processUserMessageStream(
     message: string
   ): AsyncGenerator<StreamingChunk, void, unknown> {
-    // Create new abort controller for this request
     this.abortController = new AbortController();
 
-    // Add user message to conversation
     const userEntry: ChatEntry = {
       type: "user",
       content: message,
@@ -424,34 +409,28 @@ Current working directory: ${process.cwd()}`,
     this.chatHistory.push(userEntry);
     this.messages.push({ role: "user", content: message });
 
-    // Calculate input tokens
-    let inputTokens = this.tokenCounter.countMessageTokens(
-      this.messages as any
-    );
-    yield {
-      type: "token_count",
-      tokenCount: inputTokens,
-    };
+    const startTime = Date.now();
+    const sessionId = telemetryManager.startSession();
 
-    const maxToolRounds = this.maxToolRounds; // Prevent infinite loops
+    let inputTokens = this.tokenCounter.countMessageTokens(this.messages as any);
+    yield { type: "token_count", tokenCount: inputTokens };
+
+    const maxToolRounds = this.maxToolRounds;
     let toolRounds = 0;
+    let turns = 0;
     let totalOutputTokens = 0;
     let lastTokenUpdate = 0;
 
     try {
-      // Agent loop - continue until no more tool calls or max rounds reached
-      while (toolRounds < maxToolRounds) {
-        // Check if operation was cancelled
+      while (toolRounds < maxToolRounds && turns < this.maxTurns) {
+        turns++;
+
         if (this.abortController?.signal.aborted) {
-          yield {
-            type: "content",
-            content: "\n\n[Operation cancelled by user]",
-          };
+          yield { type: "content", content: "\n\n[Operation cancelled by user]" };
           yield { type: "done" };
           return;
         }
 
-        // Stream response and accumulate
         const tools = await getAllGrokTools();
         const stream = this.grokClient.chatStream(
           this.messages,
@@ -461,73 +440,52 @@ Current working directory: ${process.cwd()}`,
             ? { search_parameters: { mode: "auto" } }
             : { search_parameters: { mode: "off" } }
         );
+
         let accumulatedMessage: any = {};
         let accumulatedContent = "";
         let toolCallsYielded = false;
 
         for await (const chunk of stream) {
-          // Check for cancellation in the streaming loop
           if (this.abortController?.signal.aborted) {
-            yield {
-              type: "content",
-              content: "\n\n[Operation cancelled by user]",
-            };
+            yield { type: "content", content: "\n\n[Operation cancelled by user]" };
             yield { type: "done" };
             return;
           }
 
           if (!chunk.choices?.[0]) continue;
 
-          // Accumulate the message using reducer
           accumulatedMessage = this.messageReducer(accumulatedMessage, chunk);
 
-          // Check for tool calls - yield when we have complete tool calls with function names
           if (!toolCallsYielded && accumulatedMessage.tool_calls?.length > 0) {
-            // Check if we have at least one complete tool call with a function name
             const hasCompleteTool = accumulatedMessage.tool_calls.some(
               (tc: any) => tc.function?.name
             );
             if (hasCompleteTool) {
-              yield {
-                type: "tool_calls",
-                toolCalls: accumulatedMessage.tool_calls,
-              };
+              yield { type: "tool_calls", toolCalls: accumulatedMessage.tool_calls };
               toolCallsYielded = true;
             }
           }
 
-          // Stream content as it comes
           if (chunk.choices[0].delta?.content) {
             accumulatedContent += chunk.choices[0].delta.content;
 
-            // Update token count in real-time including accumulated content and any tool calls
             const currentOutputTokens =
               this.tokenCounter.estimateStreamingTokens(accumulatedContent) +
               (accumulatedMessage.tool_calls
-                ? this.tokenCounter.countTokens(
-                    JSON.stringify(accumulatedMessage.tool_calls)
-                  )
+                ? this.tokenCounter.countTokens(JSON.stringify(accumulatedMessage.tool_calls))
                 : 0);
             totalOutputTokens = currentOutputTokens;
 
-            yield {
-              type: "content",
-              content: chunk.choices[0].delta.content,
-            };
+            yield { type: "content", content: chunk.choices[0].delta.content };
 
-            // Emit token count update
             const now = Date.now();
             if (now - lastTokenUpdate > 250) {
               lastTokenUpdate = now;
-              yield {
-                type: "token_count",
-                tokenCount: inputTokens + totalOutputTokens,
-              };
+              yield { type: "token_count", tokenCount: inputTokens + totalOutputTokens };
             }
+          }
         }
-      }
 
-        // Add assistant entry to history
         const assistantEntry: ChatEntry = {
           type: "assistant",
           content: accumulatedMessage.content || "Using tools to help you...",
@@ -536,33 +494,22 @@ Current working directory: ${process.cwd()}`,
         };
         this.chatHistory.push(assistantEntry);
 
-        // Add accumulated message to conversation
         this.messages.push({
           role: "assistant",
           content: accumulatedMessage.content || "",
           tool_calls: accumulatedMessage.tool_calls,
         } as any);
 
-        // Handle tool calls if present
         if (accumulatedMessage.tool_calls?.length > 0) {
           toolRounds++;
 
-          // Only yield tool_calls if we haven't already yielded them during streaming
           if (!toolCallsYielded) {
-            yield {
-              type: "tool_calls",
-              toolCalls: accumulatedMessage.tool_calls,
-            };
+            yield { type: "tool_calls", toolCalls: accumulatedMessage.tool_calls };
           }
 
-          // Execute tools
           for (const toolCall of accumulatedMessage.tool_calls) {
-            // Check for cancellation before executing each tool
             if (this.abortController?.signal.aborted) {
-              yield {
-                type: "content",
-                content: "\n\n[Operation cancelled by user]",
-              };
+              yield { type: "content", content: "\n\n[Operation cancelled by user]" };
               yield { type: "done" };
               return;
             }
@@ -580,13 +527,8 @@ Current working directory: ${process.cwd()}`,
             };
             this.chatHistory.push(toolResultEntry);
 
-            yield {
-              type: "tool_result",
-              toolCall,
-              toolResult: result,
-            };
+            yield { type: "tool_result", toolCall, toolResult: result };
 
-            // Add tool result with proper format (needed for AI context)
             this.messages.push({
               role: "tool",
               content: result.success
@@ -596,19 +538,9 @@ Current working directory: ${process.cwd()}`,
             });
           }
 
-          // Update token count after processing all tool calls to include tool results
-          inputTokens = this.tokenCounter.countMessageTokens(
-            this.messages as any
-          );
-          // Final token update after tools processed
-          yield {
-            type: "token_count",
-            tokenCount: inputTokens + totalOutputTokens,
-          };
-
-          // Continue the loop to get the next response (which might have more tool calls)
+          inputTokens = this.tokenCounter.countMessageTokens(this.messages as any);
+          yield { type: "token_count", tokenCount: inputTokens + totalOutputTokens };
         } else {
-          // No tool calls, we're done
           break;
         }
       }
@@ -616,19 +548,14 @@ Current working directory: ${process.cwd()}`,
       if (toolRounds >= maxToolRounds) {
         yield {
           type: "content",
-          content:
-            "\n\nMaximum tool execution rounds reached. Stopping to prevent infinite loops.",
+          content: "\n\nMaximum tool execution rounds reached. Stopping to prevent infinite loops.",
         };
       }
 
       yield { type: "done" };
     } catch (error: any) {
-      // Check if this was a cancellation
       if (this.abortController?.signal.aborted) {
-        yield {
-          type: "content",
-          content: "\n\n[Operation cancelled by user]",
-        };
+        yield { type: "content", content: "\n\n[Operation cancelled by user]" };
         yield { type: "done" };
         return;
       }
@@ -639,14 +566,11 @@ Current working directory: ${process.cwd()}`,
         timestamp: new Date(),
       };
       this.chatHistory.push(errorEntry);
-      yield {
-        type: "content",
-        content: errorEntry.content,
-      };
+      yield { type: "content", content: errorEntry.content };
       yield { type: "done" };
     } finally {
-      // Clean up abort controller
       this.abortController = null;
+      telemetryManager.endSession();
     }
   }
 
@@ -710,7 +634,6 @@ Current working directory: ${process.cwd()}`,
           });
 
         default:
-          // Check if this is an MCP tool
           if (toolCall.function.name.startsWith("mcp__")) {
             return await this.executeMCPTool(toolCall);
           }
@@ -742,7 +665,6 @@ Current working directory: ${process.cwd()}`,
         };
       }
 
-      // Extract content from result
       const output = result.content
         .map((item) => {
           if (item.type === "text") {
@@ -784,7 +706,6 @@ Current working directory: ${process.cwd()}`,
 
   setModel(model: string): void {
     this.grokClient.setModel(model);
-    // Update token counter for new model
     this.tokenCounter.dispose();
     this.tokenCounter = createTokenCounter(model);
   }

@@ -15,7 +15,6 @@ import {
 } from "../../utils/confirmation-service.js";
 import { preprocessPrompt } from "../../utils/slash-commands.js";
 import ApiKeyInput from "./api-key-input.js";
-import cfonts from "cfonts";
 
 interface ChatInterfaceProps {
   agent?: GrokAgent;
@@ -67,51 +66,14 @@ function ChatInterfaceWithAgent({
   });
 
   useEffect(() => {
-    // Only clear console on non-Windows platforms or if not PowerShell
-    // Windows PowerShell can have issues with console.clear() causing flickering
-    const isWindows = process.platform === "win32";
-    const isPowerShell =
-      process.env.ComSpec?.toLowerCase().includes("powershell") ||
-      process.env.PSModulePath !== undefined;
-
-    if (!isWindows || !isPowerShell) {
-      console.clear();
-    }
-
     // Add top padding
     console.log("    ");
 
     // Generate logo with margin to match Ink paddingX={2}
-    let logoLines: string[] = [];
-    try {
-      const logoOutput = cfonts.render("GROK", {
-        font: "3d",
-        align: "left",
-        colors: ["magenta", "gray"],
-        space: true,
-        maxLength: "0",
-        gradient: ["magenta", "cyan"],
-        independentGradient: false,
-        transitionGradient: true,
-        env: "node",
-      });
-
-      if (logoOutput && (logoOutput as any).string) {
-        logoLines = (logoOutput as any).string.split("\n");
-      } else {
-        // Fallback: simple text logo if font rendering fails
-        logoLines = [
-          "  GROK",
-          ""
-        ];
-      }
-    } catch (error) {
-      // Fallback: simple text logo if font rendering fails
-      logoLines = [
-        "  GROK",
-        ""
-      ];
-    }
+    let logoLines: string[] = [
+      "  GROK",
+      ""
+    ];
 
     console.log(" "); // Spacing after logo
 
