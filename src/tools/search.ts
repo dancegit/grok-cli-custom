@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { ToolResult } from "../types/index.js";
 import { ConfirmationService } from "../utils/confirmation-service.js";
-import * as fs from "fs";
+import * as fs from "@bearz/fs";
 import * as path from "path";
 
 export interface SearchResult {
@@ -272,7 +272,7 @@ export class SearchTool {
       if (depth > 10 || files.length >= maxResults) return; // Prevent infinite recursion and limit results
 
       try {
-        const entries = fs.readDir(dir);
+        
 
         for (const entry of entries) {
           if (files.length >= maxResults) break;
@@ -287,7 +287,7 @@ export class SearchTool {
 
           // Skip common directories
           if (
-            entry.isDirectory() &&
+            entry.isDirectory &&
             [
               "node_modules",
               ".git",
@@ -310,7 +310,7 @@ export class SearchTool {
             continue;
           }
 
-          if (entry.isFile()) {
+          if (entry.isFile) {
             const score = this.calculateFileScore(
               entry.name,
               relativePath,
@@ -323,7 +323,7 @@ export class SearchTool {
                 score,
               });
             }
-          } else if (entry.isDirectory()) {
+          } else if (entry.isDirectory) {
             await walkDir(fullPath, depth + 1);
           }
         }
