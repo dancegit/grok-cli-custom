@@ -60,6 +60,7 @@ export function useEnhancedInput({
   const [input, setInputState] = useState("");
   const [cursorPosition, setCursorPositionState] = useState(0);
   const isMultilineRef = useRef(multiline);
+  const ctrlCCountRef = useRef(0);
   
   const {
     addToHistory,

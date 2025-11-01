@@ -8,6 +8,29 @@ export function createMCPCommand(): Command {
   const mcpCommand = new Command('mcp');
   mcpCommand.description('Manage MCP (Model Context Protocol) servers');
 
+  // Init command
+  mcpCommand
+    .command('init')
+    .description('Initialize with a default MCP server (linear)')
+    .action(async () => {
+      try {
+        const config = PREDEFINED_SERVERS.linear;
+        addMCPServer(config);
+        console.log(chalk.green(`✓ Added default MCP server: linear`));
+        
+        // Try to connect immediately
+        const manager = getMCPManager();
+        await manager.addServer(config);
+        console.log(chalk.green(`✓ Connected to MCP server: linear`));
+        
+        const tools = manager.getTools().filter(t => t.serverName === 'linear');
+        console.log(chalk.blue(`  Available tools: ${tools.length}`));
+      } catch (error: any) {
+        console.error(chalk.red(`Error initializing default MCP server: ${error.message}`));
+        process.exit(1);
+      }
+    });
+
   // Add server command
   mcpCommand
     .command('add <name>')

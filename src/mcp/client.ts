@@ -156,6 +156,10 @@ export class MCPManager extends EventEmitter {
     const { loadMCPConfig } = await import('../mcp/config');
     const config = loadMCPConfig();
     
+    if (config.servers.length === 0) {
+      console.warn(`No MCP servers configured; only built-in tools are available. Use "grok mcp add" to configure external tools.`);
+    }
+    
     // Initialize servers in parallel to avoid blocking
     const initPromises = config.servers.map(async (serverConfig) => {
       try {

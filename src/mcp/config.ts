@@ -32,6 +32,11 @@ export function addMCPServer(config: MCPServerConfig): void {
   const projectSettings = manager.loadProjectSettings();
   const mcpServers = projectSettings.mcpServers || {};
 
+  if (mcpServers[config.name]) {
+    throw new Error(`MCP server '${config.name}' already exists. Use a different name or remove the existing one first.`);
+  }
+
+
   mcpServers[config.name] = config;
   manager.updateProjectSetting('mcpServers', mcpServers);
 }
@@ -54,4 +59,20 @@ export function getMCPServer(serverName: string): MCPServerConfig | undefined {
 }
 
 // Predefined server configurations
-export const PREDEFINED_SERVERS: Record<string, MCPServerConfig> = {};
+export const PREDEFINED_SERVERS: Record<string, MCPServerConfig> = {
+  linear: {
+    name: "linear",
+    transport: {
+      type: "stdio",
+      command: "npx",
+      args: ["@linear/mcp-server"]
+    }
+  },
+  github: {
+    name: "github",
+    transport: {
+      type: "sse",
+      url: "https://mcp.github.com/sse"
+    }
+  }
+};
