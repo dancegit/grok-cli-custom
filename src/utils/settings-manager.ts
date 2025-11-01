@@ -32,6 +32,7 @@ telemetry?: TelemetrySettings; // Telemetry configuration
  */
 export interface ProjectSettings {
   model?: string; // Current model for this project
+  baseURL?: string; // API base URL for this project
   mcpServers?: Record<string, any>; // MCP server configurations
 }
 
@@ -54,7 +55,7 @@ const DEFAULT_USER_SETTINGS: Partial<UserSettings> = {
  * Default values for project settings
  */
 const DEFAULT_PROJECT_SETTINGS: Partial<ProjectSettings> = {
-  model: "grok-code-fast-1",
+  
 };
 
 /**
@@ -280,7 +281,7 @@ export class SettingsManager {
       return userDefaultModel;
     }
 
-    return DEFAULT_PROJECT_SETTINGS.model || "grok-code-fast-1";
+    return "grok-code-fast-1";
   }
 
   /**
@@ -309,6 +310,11 @@ export class SettingsManager {
     }
 
     // Then check user settings
+  // Then check project settings
+  const projectBaseURL = this.getProjectSetting("baseURL");
+  if (projectBaseURL) {
+    return projectBaseURL;
+  }
     return this.getUserSetting("apiKey");
   }
 
@@ -323,6 +329,11 @@ export class SettingsManager {
     }
 
     // Then check user settings
+  // Then check project settings
+  const projectBaseURL = this.getProjectSetting("baseURL");
+  if (projectBaseURL) {
+    return projectBaseURL;
+  }
     const userBaseURL = this.getUserSetting("baseURL");
     return (
       userBaseURL || DEFAULT_USER_SETTINGS.baseURL || "https://api.x.ai/v1"

@@ -1,23 +1,18 @@
-import { describe, it, expect, beforeEach, spyOn, beforeAll, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, spyOn, beforeAll, afterAll, mock } from "bun:test";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { TextEditorTool } from "./text-editor.js";
+import { ConfirmationService } from "../utils/confirmation-service.js";
 
-const tempDir = 'test_temp';
 
-beforeAll(async () => {
-  await fs.mkdir(tempDir, { recursive: true });
-});
-
-afterAll(async () => {
-  await fs.rm(tempDir, { recursive: true, force: true });
-});
 
 describe("TextEditorTool", () => {
   let tool: TextEditorTool;
+  const tempDir = 'test_temp';
 
   beforeEach(() => {
     tool = new TextEditorTool();
+    spyOn(ConfirmationService.prototype, 'requestConfirmation').mockResolvedValue({ confirmed: true });
   });
 
   describe("view", () => {

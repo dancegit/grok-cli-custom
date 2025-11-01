@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import { ToolResult } from '../types/index.js';
 import { ConfirmationService } from '../utils/confirmation-service.js';
 
-const execAsync = promisify(exec);
+export const execAsync = promisify(exec);
 
 export class BashTool {
   private currentDirectory: string = process.cwd();

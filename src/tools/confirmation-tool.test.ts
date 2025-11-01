@@ -1,6 +1,18 @@
 import { ConfirmationTool } from "./confirmation-tool.js";
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 
+// Mock ConfirmationService
+const mockConfirmationService = {
+  getSessionFlags: mock(() => ({ allOperations: false, fileOperations: false, bashCommands: false })),
+  requestConfirmation: mock(() => Promise.resolve({ confirmed: true, feedback: null, dontAskAgain: false }))
+};
+
+mock.module("../utils/confirmation-service.js", () => ({
+  ConfirmationService: {
+    getInstance: () => mockConfirmationService
+  }
+}));
+
 describe("ConfirmationTool", () => {
   let tool: ConfirmationTool;
 
@@ -9,48 +21,46 @@ describe("ConfirmationTool", () => {
   });
 
   describe("confirm", () => {
-    it("should return true when session flag is set for all operations", async () => {
-      (tool as any).sessionFlags = { allOperations: true, fileOperations: false };
+    it("should return success when session flag is set for all operations", async () => {
+      mockConfirmationService.getSessionFlags.mockReturnValue({ allOperations: true, fileOperations: false, bashCommands: false });
 
-      const result = await tool.confirm({
+      const result = await tool.requestConfirmation({
         operation: "test",
         filename: "test.txt",
         description: "content"
       });
 
-      expect(result).toBe(true);
+      expect(result.success).toBe(true);
     });
 
-    it("should return true when session flag is set for file operations", async () => {
-      (tool as any).sessionFlags = { allOperations: false, fileOperations: true };
+    it("should return success when session flag is set for file operations", async () => {
+      mockConfirmationService.getSessionFlags.mockReturnValue({ allOperations: false, fileOperations: true, bashCommands: false });
 
-      const result = await tool.confirm({
-        operation: "test",
-        filename: "test.txt",
-        description: "content"
-      }, "file");
-
-      expect(result).toBe(true);
-    });
-
-    it("should return false when no session flags are set", async () => {
-      // Mock the confirmation service to return false
-      const mockConfirm = mock(() => Promise.resolve({ confirmed: false, feedback: "User rejected" }));
-      (tool as any).confirmationService = { requestConfirmation: mockConfirm };
-
-      const result = await tool.confirm({
+      const result = await tool.requestConfirmation({
         operation: "test",
         filename: "test.txt",
         description: "content"
       });
 
-      expect(result).toBe(false);
-      expect(mockConfirm).toHaveBeenCalledWith({
+      expect(result.success).toBe(true);
+    });
+
+    it("should return failure when no session flags are set and user rejects", async () => {
+      mockConfirmationService.requestConfirmation.mockResolvedValue({ confirmed: false, feedback: "User rejected" });
+
+      const result = await tool.requestConfirmation({
         operation: "test",
         filename: "test.txt",
-        description: "content",
-        showVSCodeOpen: undefined,
-        autoAccept: undefined
+        description: "content"
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("User rejected");
+      expect(mockConfirmationService.requestConfirmation).toHaveBeenCalledWith({
+        operation: "test",
+        filename: "test.txt",
+        content: "content",
+        showVSCodeOpen: false
       }, "file");
     });
 
@@ -64,15 +74,14 @@ describe("ConfirmationTool", () => {
         description: "diff content"
       };
 
-      await tool.confirm(params, "bash");
+      await tool.requestConfirmation(params);
 
       expect(mockConfirm).toHaveBeenCalledWith({
         operation: "edit",
         filename: "script.js",
-        description: "diff content",
-        showVSCodeOpen: undefined,
-        autoAccept: undefined
-      }, "bash");
+        content: "diff content",
+        showVSCodeOpen: false
+      }, "file");
     });
   });
 });

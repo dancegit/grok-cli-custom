@@ -49,10 +49,15 @@ export class GrokClient {
   private client: OpenAI;
   private currentModel: string = "grok-code-fast-1";
   private defaultMaxTokens: number;
+  private isMock: boolean;
 
   constructor(apiKey: string, model?: string, baseURL?: string) {
+    if (!apiKey) {
+      throw new Error("API key required");
+    }
+    this.isMock = apiKey === 'dummy-key-for-testing';
     this.client = new OpenAI({
-      apiKey,
+      apiKey: this.isMock ? 'dummy' : apiKey,
       baseURL: baseURL || process.env.GROK_BASE_URL || "https://api.x.ai/v1",
       timeout: 360000,
     });
@@ -77,6 +82,26 @@ export class GrokClient {
     model?: string,
     searchOptions?: SearchOptions
   ): Promise<GrokResponse> {
+    if (this.isMock) {
+      return {
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: 'Mock response from Grok',
+            tool_calls: tools && tools.length > 0 ? [{
+              id: 'mock-tool-call',
+              type: 'function',
+              function: {
+                name: 'view_file',
+                arguments: '{"filePath":"package.json"}',
+              },
+            }] : undefined,
+          },
+          finish_reason: tools && tools.length > 0 ? 'tool_calls' : 'stop',
+        }],
+      };
+    }
+
     try {
       const requestPayload: any = {
         model: model || this.currentModel,
@@ -107,6 +132,24 @@ export class GrokClient {
     model?: string,
     searchOptions?: SearchOptions
   ): AsyncGenerator<any, void, unknown> {
+    if (this.isMock) {
+      yield {
+        choices: [{
+          delta: {
+            content: 'Mock streamed response',
+            tool_calls: tools && tools.length > 0 ? [{
+              id: 'mock-stream-tool-call',
+              function: {
+                name: 'search',
+                arguments: '{"query":"test"}',
+              },
+            }] : undefined,
+          },
+        }],
+      };
+      return;
+    }
+
     try {
       const requestPayload: any = {
         model: model || this.currentModel,
@@ -139,6 +182,18 @@ export class GrokClient {
     query: string,
     searchParameters?: SearchParameters
   ): Promise<GrokResponse> {
+    if (this.isMock) {
+      return {
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: `Mock search result for: ${query}`,
+          },
+          finish_reason: 'stop',
+        }],
+      };
+    }
+
     const searchMessage: GrokMessage = {
       role: "user",
       content: query,

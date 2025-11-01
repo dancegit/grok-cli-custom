@@ -26,7 +26,7 @@ const GROK_BINARY = path.join(process.cwd(), 'dist', 'grok.js');
 beforeAll(async () => {
   await buildProject();
   if (!fs.existsSync(GROK_BINARY)) {
-    throw new Error('Build failed: dist/index.js not found');
+    throw new Error('Build failed: dist/grok.js not found');
   }
   if (!REAL_API_KEY) {
     console.warn('Skipping real API tests due to missing GROK_API_KEY. Set it and re-run.');
@@ -99,18 +99,26 @@ if (!REAL_API_KEY) {
     expect(parsed.messages.length).toBeGreaterThan(1); // Includes user + assistant
   }, 60000);
 
-  // Test --output-format stream-json with -p (real streaming JSON)
-  test('-p with --output-format stream-json streams JSON lines', async () => {
+  // Test --output-format stream-json with agent mode (real streaming JSON)
+  test('-p with --output-format stream-json streams agent JSON chunks', async () => {
     const { stdout, exitCode } = await runGrokCli(['-p', 'Stream test', '--output-format', 'stream-json']);
     expect(exitCode).toBe(0);
-    const lines = stdout.split('\n').filter(l => l.trim());
+    const lines = stdout.split(''\n').filter(l => l.trim());
     expect(lines.length).toBeGreaterThan(3); // At least a few real stream chunks
-    // Check first few lines parse (real streams start with [DONE] or choices)
-    lines.slice(0, 3).forEach(line => {
+    // Check that chunks have agent streaming format with types like "content", "tool_calls", etc.
+    let hasContent = false;
+    let hasDone = false;
+    lines.forEach(line => {
       if (line.trim()) {
         expect(() => JSON.parse(line)).not.toThrow(); // All parseable
         const parsed = JSON.parse(line);
-        expect(parsed).toHaveProperty('choices') || expect(parsed.id).toBeDefined(); // Has choices or id
+        if (parsed.type === 'content') hasContent = true;
+        if (parsed.type === 'done') hasDone = true;
+      }
+    });
+    expect(hasContent).toBe(true); // Should have content chunks
+    expect(hasDone).toBe(true); // Should have done chunk
+  }, 60000);
       }
     }, 60000);
   }, 60000);

@@ -1,5 +1,3 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test";
-
 // Mock child_process and util
 const execMock = mock();
 
@@ -7,13 +5,27 @@ mock.module("child_process", () => ({
   exec: execMock
 }));
 
+import { describe, it, expect, mock, beforeEach, spyOn } from "bun:test";
+import { BashTool, execAsync } from "./bash.js";
+
+// Mock ConfirmationService
+const confirmMock = mock(() => Promise.resolve({ confirmed: true, feedback: null }));
+
+mock.module("../utils/confirmation-service.js", () => ({
+  ConfirmationService: {
+    getInstance: () => ({
+      getSessionFlags: () => ({ bashCommands: true, allOperations: false }),
+      requestConfirmation: confirmMock
+    })
+  }
+}));
+
 
 describe("BashTool", () => {
-  let tool: any;
+  let tool: BashTool;
 
-  beforeEach(async () => {
-    const module = await import("./bash.js");
-    tool = new module.BashTool();
+  beforeEach(() => {
+    tool = new BashTool();
     execMock.mockReset();
   });
 
@@ -70,3 +82,4 @@ describe("BashTool", () => {
     });
   });
 });
+

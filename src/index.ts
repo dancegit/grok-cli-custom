@@ -331,13 +331,24 @@ async function processPromptHeadless(
       }
     };
 
-    if (outputFormat === "stream-json" && !useAgent) {
-      const stream = await client.chatStream(messages, [], model);
-      for await (const chunk of stream) {
-        outputToFileOrStdout(JSON.stringify(chunk) + "\n", true);
+    if (outputFormat === "stream-json") {
+      if (useAgent) {
+        // Use agent's streaming method for real-time chunks with tool execution
+        const agent = new GrokAgent(apiKey, baseURL, model, maxToolRounds, maxTurns);
+        const confirmationService = ConfirmationService.getInstance();
+        confirmationService.setSessionFlag("allOperations", dangerouslySkipPermissions);
+
+        const stream = agent.processUserMessageStream(processedPrompt);
+        for await (const chunk of stream) {
+          outputToFileOrStdout(JSON.stringify(chunk) + "\n", true);
+        }
+      } else {
+        // Direct client streaming without agent/tools
+        const stream = await client.chatStream(messages, [], model);
+        for await (const chunk of stream) {
+          outputToFileOrStdout(JSON.stringify(chunk) + "\n", true);
+        }
       }
-    } else if (outputFormat === "json") {
-      const data = JSON.stringify({ messages }, null, 2) + "\n";
       outputToFileOrStdout(data);
     } else if (outputFormat === "jsonl") {
       for (const message of messages) {
@@ -345,8 +356,8 @@ async function processPromptHeadless(
       }
     } else {
       // text
-      const lastAssistant = messages.filter(m => m.role === "assistant").pop();
-      const content = lastAssistant?.content || "No response generated.";
+      const lastMessage = messages[messages.length - 1];
+      const content = lastMessage?.content || "No response generated.";
       const data = content + "\n";
       outputToFileOrStdout(data);
     }
@@ -383,7 +394,7 @@ program
   .option("-s, --append-system-prompt <prompt>", "append to system prompt")
   .option("--max-tool-rounds <rounds>", "max tool rounds", "400")
   .option("--max-turns <turns>", "limit agent turns")
-  .option("--output-format <format>", "output format", "text")
+  .option("--output-format <format>", "Output format: text (human-readable), json (conversation), jsonl (line-delimited), stream-json (real-time chunks)", "text")
   .option("--output-file <file>", "save output to file")
   .option("--verbose", "enable verbose logging")
   .option("--dangerously-skip-permissions", "skip confirmations")
@@ -460,6 +471,7 @@ program
           useAgent,
           enableAutoEdit
         );
+
         return;
       }
 

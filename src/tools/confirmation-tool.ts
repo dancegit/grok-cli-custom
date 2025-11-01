@@ -29,7 +29,8 @@ export class ConfirmationTool {
       const options: ConfirmationOptions = {
         operation: request.operation,
         filename: request.filename,
-        showVSCodeOpen: request.showVSCodeOpen || false
+        showVSCodeOpen: request.showVSCodeOpen || false,
+        content: request.description
       };
 
       // Determine operation type based on operation name

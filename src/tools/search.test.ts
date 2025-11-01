@@ -1,24 +1,51 @@
 import { SearchTool } from "./search.js";
+import { describe, it, expect, beforeEach, mock } from "bun:test";
 
 import * as fs from "fs";
 import { glob } from "glob";
 import * as path from "path";
 
 // Mock dependencies
- 
-jest.mock("glob");
-jest.mock("path");
+const globMock = mock(() => Promise.resolve([]));
+const fsReadFileMock = mock(() => Promise.resolve(""));
+const fsStatMock = mock(() => Promise.resolve({ size: 100 }));
+const pathJoinMock = mock((...args) => args.join("/"));
+const spawnMock = mock(() => ({
+  stdout: { on: mock(), setEncoding: mock() },
+  stderr: { on: mock(), setEncoding: mock() },
+  on: mock((event, callback) => {
+    if (event === 'close') callback(0);
+  })
+}));
 
-const mockedFs = fs as jest.Mocked<typeof fs>;
-const mockedGlob = glob as jest.MockedFunction<typeof glob>;
-const mockedPath = path as jest.Mocked<typeof path>;
+mock.module("glob", () => ({
+  glob: globMock
+}));
+
+mock.module("fs", () => ({
+  promises: {
+    readFile: fsReadFileMock,
+    stat: fsStatMock
+  }
+}));
+
+mock.module("path", () => ({
+  join: pathJoinMock
+}));
+
+mock.module("child_process", () => ({
+  spawn: spawnMock
+}));
 
 describe("SearchTool", () => {
   let tool: SearchTool;
 
   beforeEach(() => {
     tool = new SearchTool();
-    jest.clearAllMocks();
+    globMock.mockReset();
+    fsReadFileMock.mockReset();
+    fsStatMock.mockReset();
+    pathJoinMock.mockReset();
   });
 
   describe("search", () => {
@@ -27,7 +54,7 @@ describe("SearchTool", () => {
       const mockContent1 = "content with search term";
       const mockContent2 = "other content";
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
       mockedFs.readFile
         .mockResolvedValueOnce(mockContent1)
         .mockResolvedValueOnce(mockContent2);
@@ -44,7 +71,7 @@ describe("SearchTool", () => {
     it("should handle files search", async () => {
       const mockFiles = ["test.txt", "script.js", "data.json"];
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
 
       const result = await tool.search("*.txt", { searchType: "files" });
 
@@ -58,7 +85,7 @@ describe("SearchTool", () => {
       const mockFiles = ["file1.txt"];
       const mockContent = "test123 and test456";
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
       mockedFs.readFile.mockResolvedValue(mockContent);
       mockedFs.stat.mockResolvedValue({ size: 100 } as any);
 
@@ -72,7 +99,7 @@ describe("SearchTool", () => {
       const mockFiles = ["file1.txt"];
       const mockContent = "Test and test";
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
       mockedFs.readFile.mockResolvedValue(mockContent);
       mockedFs.stat.mockResolvedValue({ size: 100 } as any);
 
@@ -86,7 +113,7 @@ describe("SearchTool", () => {
       const mockFiles = ["file1.txt"];
       const mockContent = "test testing tester";
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
       mockedFs.readFile.mockResolvedValue(mockContent);
       mockedFs.stat.mockResolvedValue({ size: 100 } as any);
 
@@ -100,7 +127,7 @@ describe("SearchTool", () => {
       const mockFiles = Array.from({ length: 100 }, (_, i) => `file${i}.txt`);
       const mockContent = "search term";
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
       mockedFs.readFile.mockResolvedValue(mockContent);
       mockedFs.stat.mockResolvedValue({ size: 100 } as any);
 
@@ -113,7 +140,7 @@ describe("SearchTool", () => {
     it("should filter by file types", async () => {
       const mockFiles = ["test.js", "test.txt", "test.json"];
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
 
       const result = await tool.search("test", {
         searchType: "files",
@@ -129,7 +156,7 @@ describe("SearchTool", () => {
     it("should handle include pattern", async () => {
       const mockFiles = ["src/test.js", "lib/test.js"];
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
 
       const result = await tool.search("test", {
         searchType: "files",
@@ -144,7 +171,7 @@ describe("SearchTool", () => {
     it("should handle exclude pattern", async () => {
       const mockFiles = ["src/test.js", "node_modules/test.js"];
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
 
       const result = await tool.search("test", {
         searchType: "files",
@@ -157,7 +184,7 @@ describe("SearchTool", () => {
     });
 
     it("should handle no matches found", async () => {
-      mockedGlob.mockResolvedValue([]);
+      globMock.mockResolvedValue([]);
 
       const result = await tool.search("nonexistent");
 
@@ -166,7 +193,7 @@ describe("SearchTool", () => {
     });
 
     it("should handle search error", async () => {
-      mockedGlob.mockRejectedValue(new Error("Search failed"));
+      globMock.mockRejectedValue(new Error("Search failed"));
 
       const result = await tool.search("query");
 
@@ -177,7 +204,7 @@ describe("SearchTool", () => {
     it("should handle file read error", async () => {
       const mockFiles = ["file1.txt"];
 
-      mockedGlob.mockResolvedValue(mockFiles);
+      globMock.mockResolvedValue(mockFiles);
       mockedFs.readFile.mockRejectedValue(new Error("Read failed"));
       mockedFs.stat.mockResolvedValue({ size: 100 } as any);
 

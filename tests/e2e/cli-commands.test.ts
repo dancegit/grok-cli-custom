@@ -45,7 +45,7 @@ describe('CLI Commands - No API Key Required', () => {
   test('shows help with --help', async () => {
     const { stdout, exitCode } = await runGrokCli(['--help']);
     expect(exitCode).toBe(0);
-    expect(stdout).toContain('grok [options] [message...]');
+    expect(stdout).toContain('grok [options] [command] [message...]');
     expect(stdout).toContain('--api-key');
     expect(stdout).toContain('--model');
     expect(stdout).toContain('--prompt');

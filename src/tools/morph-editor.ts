@@ -44,74 +44,61 @@ export class MorphEditorTool {
     instructions: string,
     codeEdit: string
   ): Promise<ToolResult> {
+    if (!this.morphApiKey) {
       return {
         success: false,
-        error: `File or directory not found: ${filePath}`,
+        error: "MORPH_API_KEY not set. Cannot use Morph editor.",
       };
     }
-        const stats = await fs.stat(resolvedPath);
 
-        if (stats.isDirectory()) {
-          const files: string[] = [];
-        for await (const entry of fs.readDir(resolvedPath)) {
-          files.push(entry.name);
-        }
-          return {
-            success: true,
-            output: `Directory contents of ${filePath}:\n${files.join("\n")}`,
-          };
-        }
+    try {
+      const resolvedPath = path.resolve(targetFile);
+      // Read the current file content
+      const currentContent = await fs.readTextFile(resolvedPath);
 
-              } else {
-        const content = await fs.readTextFile(resolvedPath);
-        const lines = content.split("\n");
+      // Call Morph API to apply the edit
+      const response = await axios.post(`${this.morphBaseUrl}/edit`, {
+        file_path: targetFile,
+        current_content: currentContent,
+        instructions: instructions,
+        code_edit: codeEdit,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.morphApiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-        if (viewRange) {
-          const [start, end] = viewRange;
-          const selectedLines = lines.slice(start - 1, end);
-          const numberedLines = selectedLines
-            .map((line, idx) => `${start + idx}: ${line}`)
-            .join("\n");
+      const newContent = response.data.edited_content;
 
-          return {
-            success: true,
-            output: `Lines ${start}-${end} of ${filePath}:\n${numberedLines}`,
-          };
-        }
+      // Confirm the edit
+      const confirmed = await this.confirmationService.confirm(
+        `Apply edit to ${targetFile}?`,
+        `Edit instructions: ${instructions}\n\nNew content preview:\n${newContent.slice(0, 500)}${newContent.length > 500 ? '...' : ''}`
+      );
 
-        const totalLines = lines.length;
-        const displayLines = totalLines > 10 ? lines.slice(0, 10) : lines;
-        const numberedLines = displayLines
-          .map((line, idx) => `${idx + 1}: ${line}`)
-          .join("\n");
-        const additionalLinesMessage =
-          totalLines > 10 ? `\n... +${totalLines - 10} lines` : "";
-
-        return {
-          success: true,
-          output: `Contents of ${filePath}:\n${numberedLines}${additionalLinesMessage}`,
-        };
-      } else {
+      if (!confirmed) {
         return {
           success: false,
-          error: `File or directory not found: ${filePath}`,
+          error: "Edit cancelled by user.",
         };
       }
-    } catch (error) {
+
+      // Write the new content
+      await fs.writeTextFile(resolvedPath, newContent);
+
+      return {
+        success: true,
+        output: `Successfully edited ${targetFile}`,
+      };
+    } catch (error: any) {
       return {
         success: false,
-        error: `Error viewing ${filePath}: ${(error as Error).message}`,
+        error: `Error editing ${targetFile}: ${error.message}`,
       };
     }
   }
 
-  setApiKey(apiKey) {
-    this.morphApiKey = apiKey;
-  }
-
-  getApiKey() {
-    return this.morphApiKey;
-  }
   async view(
     filePath: string,
     viewRange?: [number, number]
@@ -157,11 +144,12 @@ export class MorphEditorTool {
     } catch (error: any) {
       return {
         success: false,
-        error: `Error viewing ${filePath}: ${(error as Error).message}`,
+        error: `Error viewing ${filePath}: ${error.message}`,
       };
     }
   }
-  setApiKey(apiKey) {
+
+  setApiKey(apiKey: string) {
     this.morphApiKey = apiKey;
   }
 

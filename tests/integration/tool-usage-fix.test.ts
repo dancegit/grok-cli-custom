@@ -1,8 +1,69 @@
 import { execa } from 'execa';
-import { expect, test, describe, beforeAll, afterAll } from 'bun:test';
+import { expect, test, describe, beforeAll, afterAll, mock } from 'bun:test';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+
+// Mock GrokClient to avoid real API calls
+mock.module('../src/grok/client.ts', () => ({
+  GrokClient: class MockGrokClient {
+    async chat(messages: any[], tools?: any[], model?: string) {
+      // Mock tool calls for testing
+      const mockResponse = {
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: 'Mock response with tool usage',
+            tool_calls: [
+              {
+                id: 'mock-tool-call-1',
+                type: 'function',
+                function: {
+                  name: 'view_file',
+                  arguments: '{"filePath":"package.json"}',
+                },
+              },
+            ],
+          },
+          finish_reason: 'tool_calls',
+        }],
+      };
+      return mockResponse;
+    }
+
+    async *chatStream(messages: any[], tools?: any[], model?: string) {
+      yield {
+        choices: [{
+          delta: {
+            tool_calls: [
+              {
+                id: 'mock-tool-call-1',
+                function: {
+                  name: 'search',
+                  arguments: '{"query":"test"}',
+                },
+              },
+            ],
+          },
+        }],
+      };
+    }
+
+    setModel(model: string) {}
+    getCurrentModel() { return 'mock-model'; }
+    async search(query: string) {
+      return {
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: `Mock search result for: ${query}`,
+          },
+          finish_reason: 'stop',
+        }],
+      };
+    }
+  },
+}));
 
 // Test API key - use dummy or env
 const TEST_API_KEY = process.env.GROK_API_KEY || 'dummy-key-for-testing';
@@ -39,8 +100,6 @@ const hasApiKey = TEST_API_KEY && TEST_API_KEY !== 'dummy-key-for-testing';
 
 const describeToolTests = hasApiKey ? describe : describe.skip;
 describeToolTests('Tool Usage Fixes - Headless Mode', () => {
-describeToolTests('Tool Usage Fixes - Headless Mode', () => {
-  }
   describe('JSON Output Format', () => {
     test('uses tools in headless mode with --output-format json', async () => {
       // Prompt that should trigger tool usage (view_file)
