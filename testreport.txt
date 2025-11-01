@@ -1,0 +1,786 @@
+bun test v1.3.1 (89fa0f34)
+
+tests/slash-commands.test.ts:
+(pass) Slash Commands > should detect slash commands [0.08ms]
+(pass) Slash Commands > should process /prime command [1.03ms]
+(pass) Slash Commands > should process /standard:plan command [0.19ms]
+(pass) Slash Commands > should process /feature command [0.11ms]
+(pass) Slash Commands > should return available commands [0.21ms]
+(pass) Slash Commands > should return command suggestions [1.16ms]
+(pass) Slash Commands > should handle missing command [0.24ms]
+(pass) Slash Commands > should handle invalid command format [0.08ms]
+(pass) Slash Commands > should substitute TAC variables [0.12ms]
+(pass) Slash Commands > should load real commands from project directory [0.40ms]
+
+tests/cli-flags.test.ts:
+All CLI flag tests passed!
+(pass) loadModel validates Grok models correctly [0.41ms]
+(pass) --model flag parses correctly [0.41ms]
+(pass) -m model flag parses correctly [0.13ms]
+(pass) Invalid model is accepted in parsing [0.08ms]
+(pass) --output-format parses correctly [0.29ms]
+(pass) Invalid --output-format is accepted in parsing [0.08ms]
+(pass) -p flag sets prompt mode [0.07ms]
+(pass) Positional message treated as print if no interactive [0.16ms]
+(pass) --verbose flag [0.13ms]
+(pass) --dangerously-skip-permissions flag [0.08ms]
+(pass) Stdin content used in headless [0.07ms]
+(pass) Print mode combines stdin and prompt [0.04ms]
+(pass) Interactive with initial message [0.15ms]
+(pass) Git commit-and-push parses flags [0.06ms]
+
+src/tools/text-editor.test.ts:
+(pass) TextEditorTool > view > should view file contents [9.14ms]
+(pass) TextEditorTool > view > should view directory contents [1.05ms]
+(pass) TextEditorTool > view > should handle file not found [0.42ms]
+(pass) TextEditorTool > view > should view partial file with range [0.53ms]
+(pass) TextEditorTool > create > should create a new file [2.51ms]
+(pass) TextEditorTool > create > should handle creation error [0.33ms]
+(pass) TextEditorTool > strReplace > should replace text in file [1.25ms]
+(pass) TextEditorTool > strReplace > should handle string not found [0.42ms]
+(pass) TextEditorTool > strReplace > should replace all occurrences when replaceAll is true [0.55ms]
+152 |       await fs.writeFile(filePath, originalContent);
+153 | 
+154 |       const result = await tool.replaceLines('test_temp/test.txt', 2, 2, "newcontent");
+155 | 
+156 |       expect(result.success).toBe(true);
+157 |       expect(result.output).toContain("line1\nnewcontent\nline3");
+                                  ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "line1\nnewcontent\nline3"
+Received: "Updated test_temp/test.txt with 2 additions and 2 removals\n--- a/test_temp/test.txt\n+++ b/test_temp/test.txt\n@@ -1,3 +1,3 @@\n line1\n-line2\n-line3\n+newcontent\n+line3"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/text-editor.test.ts:157:29)
+(fail) TextEditorTool > replaceLines > should replace lines in file [1.03ms]
+(pass) TextEditorTool > replaceLines > should handle invalid line range [0.40ms]
+183 |       await fs.writeFile(filePath, originalContent);
+184 | 
+185 |       const result = await tool.insert('test_temp/test.txt', 2, "inserted");
+186 | 
+187 |       expect(result.success).toBe(true);
+188 |       expect(result.output).toContain("line1\ninserted\nline3");
+                                  ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "line1\ninserted\nline3"
+Received: "Successfully inserted content at line 2 in test_temp/test.txt"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/text-editor.test.ts:188:29)
+(fail) TextEditorTool > insert > should insert content at line [0.75ms]
+(pass) TextEditorTool > undoEdit > should undo last edit [1.27ms]
+(pass) TextEditorTool > undoEdit > should handle no edits to undo [0.13ms]
+
+src/tools/bash.test.ts:
+28 |       promisifyMock.mockReturnValue(mock(() => Promise.resolve(mockResult)));
+29 | 
+30 |       const result = await tool.execute("ls -la");
+31 | 
+32 |       expect(result.success).toBe(true);
+33 |       expect(result.output).toBe("output");
+                                 ^
+error: expect(received).toBe(expected)
+
+- "output"
++ "total 110208
++ drwxr-xr-x  16 clauderun clauderun      4096 Nov  1 13:44 .
++ drwxr-xr-x  67 clauderun clauderun     20480 Nov  1 13:42 ..
++ -rw-r--r--   1 clauderun clauderun   1771574 Oct 31 12:06 .aider.chat.history.md
++ -rw-r--r--   1 clauderun clauderun      4136 Oct 31 12:06 .aider.input.history
++ drwxr-xr-x   2 clauderun clauderun      4096 Oct 31 11:59 .aider.tags.cache.v4
++ -rw-r--r--   1 clauderun clauderun    181518 Nov  1 13:17 bun.lock
++ drwxr-xr-x   3 clauderun clauderun      4096 Oct 31 13:43 .claude
++ drwxr-xr-x   3 clauderun clauderun      4096 Nov  1 13:43 coverage
++ drwxr-xr-x   2 clauderun clauderun      4096 Nov  1 13:08 dist
++ -rw-r--r--   1 clauderun clauderun       134 Oct 29 08:24 .env.example
++ -rw-r--r--   1 clauderun clauderun       338 Oct 29 08:24 .eslintrc.js
++ drwxr-xr-x   9 clauderun clauderun      4096 Nov  1 13:43 .git
++ -rw-r-----   1 clauderun clauderun        42 Oct 31 12:19 .gitattributes
++ drwxr-xr-x   4 clauderun clauderun      4096 Oct 29 08:24 .github
++ -rw-r--r--   1 clauderun clauderun      1297 Nov  1 08:30 .gitignore
++ drwx------   2 clauderun clauderun      4096 Nov  1 10:55 .grok
++ -rwxr-xr-x   1 clauderun clauderun 110334829 Oct 31 11:34 index
++ drwxr-xr-x   2 clauderun clauderun      4096 Nov  1 13:20 issue-docs
++ -rw-r--r--   1 clauderun clauderun      1080 Oct 29 08:24 LICENSE
++ drwxr-xr-x   2 clauderun clauderun      4096 Nov  1 08:47 mkdir
++ -rw-r--r--   1 clauderun clauderun         7 Nov  1 13:10 newfile.txt
++ drwxr-xr-x 411 clauderun clauderun     16384 Nov  1 13:17 node_modules
++ -rw-r--r--   1 clauderun clauderun      1030 Oct 29 08:24 .npmignore
++ -rw-r--r--   1 clauderun clauderun      1562 Nov  1 13:17 package.json
++ -rw-r--r--   1 clauderun clauderun    378917 Nov  1 13:05 package-lock.json
++ -rw-r--r--   1 clauderun clauderun      7299 Nov  1 13:05 README.md
++ drwxr-xr-x   2 clauderun clauderun      4096 Nov  1 13:22 reports
++ drwxr-xr-x   2 clauderun clauderun      4096 Oct 31 18:57 specs
++ drwxr-xr-x  11 clauderun clauderun      4096 Nov  1 13:12 src
++ -rw-r--r--   1 clauderun clauderun        40 Nov  1 13:10 stdin_content.txt
++ -rw-r--r--   1 clauderun clauderun      3855 Nov  1 13:44 testreport.txt
++ drwxr-xr-x   5 clauderun clauderun      4096 Nov  1 08:54 tests
++ -rw-r--r--   1 clauderun clauderun         7 Nov  1 13:44 test.txt
++ -rw-r--r--   1 clauderun clauderun       540 Oct 29 08:24 tsconfig.json
++ -rw-r--r--   1 clauderun clauderun       133 Nov  1 13:37 verbose_test.txt"
+
+- Expected  - 1
++ Received  + 36
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/bash.test.ts:33:29)
+(fail) BashTool > execute > should execute successful command [7.33ms]
+37 |       const mockResult = { stdout: "output", stderr: "warning" };
+38 |       promisifyMock.mockReturnValue(mock(() => Promise.resolve(mockResult)));
+39 | 
+40 |       const result = await tool.execute("command with warning");
+41 | 
+42 |       expect(result.success).toBe(true);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/bash.test.ts:42:30)
+(fail) BashTool > execute > should handle command with stderr [3.54ms]
+(pass) BashTool > execute > should handle command error [1.47ms]
+(pass) BashTool > execute > should handle command with exit code [1.70ms]
+(pass) BashTool > execute > should get current directory [0.14ms]
+
+src/tools/search.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+4 | import { glob } from "glob";
+5 | import * as path from "path";
+6 | 
+7 | // Mock dependencies
+8 | 
+9 | jest.mock("glob");
+         ^
+TypeError: mock(module, fn) requires a function
+      at /home/clauderun/grok-cli-custom/src/tools/search.test.ts:9:6
+      at loadAndEvaluateModule (2:1)
+-------------------------------
+
+
+src/tools/todo-tool.test.ts:
+(pass) TodoTool > createTodoList > should create a todo list [0.70ms]
+(pass) TodoTool > createTodoList > should handle empty todo list [0.10ms]
+(pass) TodoTool > createTodoList > should format todos with correct status indicators [0.15ms]
+(pass) TodoTool > updateTodoList > should update todo status [0.55ms]
+(pass) TodoTool > updateTodoList > should update todo content [0.14ms]
+(pass) TodoTool > updateTodoList > should update todo priority [0.10ms]
+(pass) TodoTool > updateTodoList > should handle multiple updates [0.13ms]
+(pass) TodoTool > updateTodoList > should handle non-existent todo id [0.09ms]
+(pass) TodoTool > updateTodoList > should handle empty updates [0.10ms]
+(pass) TodoTool > Priority indicators > should display correct priority indicators [0.12ms]
+(pass) TodoTool > Status indicators > should display correct status indicators [0.12ms]
+
+src/tools/morph-editor.test.ts:
+25 |         data: { success: true, result: "File edited successfully" }
+26 |       });
+27 | 
+28 |       const result = await tool.editFile("test.txt", "Add function", "function test() {}");
+29 | 
+30 |       expect(result.success).toBe(true);
+                                  ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/morph-editor.test.ts:30:30)
+(fail) MorphEditorTool > editFile > should successfully edit file with valid response [0.93ms]
+37 |       });
+38 | 
+39 |       const result = await tool.editFile("test.txt", "Edit", "code");
+40 | 
+41 |       expect(result.success).toBe(false);
+42 |       expect(result.error).toContain("400");
+                                ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "400"
+Received: "Error editing test.txt with Morph: The \"cb\" argument must be of type function. Received undefined"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/morph-editor.test.ts:42:28)
+(fail) MorphEditorTool > editFile > should handle API error [0.26ms]
+46 |       postSpy.mockRejectedValue(new Error("Network error"));
+47 | 
+48 |       const result = await tool.editFile("test.txt", "Edit", "code");
+49 | 
+50 |       expect(result.success).toBe(false);
+51 |       expect(result.error).toContain("Network error");
+                                ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Network error"
+Received: "Error editing test.txt with Morph: The \"cb\" argument must be of type function. Received undefined"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/morph-editor.test.ts:51:28)
+(fail) MorphEditorTool > editFile > should handle network error [0.18ms]
+57 |       });
+58 | 
+59 |       const result = await tool.editFile("test.txt", "Edit", "code");
+60 | 
+61 |       expect(result.success).toBe(false);
+62 |       expect(result.error).toContain("Invalid response");
+                                ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Invalid response"
+Received: "Error editing test.txt with Morph: The \"cb\" argument must be of type function. Received undefined"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/morph-editor.test.ts:62:28)
+(fail) MorphEditorTool > editFile > should handle malformed response [0.20ms]
+
+src/tools/confirmation-tool.test.ts:
+10 | 
+11 |   describe("confirm", () => {
+12 |     it("should return true when session flag is set for all operations", async () => {
+13 |       (tool as any).sessionFlags = { allOperations: true, fileOperations: false };
+14 | 
+15 |       const result = await tool.confirm({
+                                     ^
+TypeError: tool.confirm is not a function. (In 'tool.confirm({
+        operation: "test",
+        filename: "test.txt",
+        description: "content"
+      })', 'tool.confirm' is undefined)
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/confirmation-tool.test.ts:15:33)
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/confirmation-tool.test.ts:12:74)
+(fail) ConfirmationTool > confirm > should return true when session flag is set for all operations [0.24ms]
+22 |     });
+23 | 
+24 |     it("should return true when session flag is set for file operations", async () => {
+25 |       (tool as any).sessionFlags = { allOperations: false, fileOperations: true };
+26 | 
+27 |       const result = await tool.confirm({
+                                     ^
+TypeError: tool.confirm is not a function. (In 'tool.confirm({
+        operation: "test",
+        filename: "test.txt",
+        description: "content"
+      }, "file")', 'tool.confirm' is undefined)
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/confirmation-tool.test.ts:27:33)
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/confirmation-tool.test.ts:24:75)
+(fail) ConfirmationTool > confirm > should return true when session flag is set for file operations [0.15ms]
+36 |     it("should return false when no session flags are set", async () => {
+37 |       // Mock the confirmation service to return false
+38 |       const mockConfirm = mock(() => Promise.resolve({ confirmed: false, feedback: "User rejected" }));
+39 |       (tool as any).confirmationService = { requestConfirmation: mockConfirm };
+40 | 
+41 |       const result = await tool.confirm({
+                                     ^
+TypeError: tool.confirm is not a function. (In 'tool.confirm({
+        operation: "test",
+        filename: "test.txt",
+        description: "content"
+      })', 'tool.confirm' is undefined)
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/confirmation-tool.test.ts:41:33)
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/confirmation-tool.test.ts:36:61)
+(fail) ConfirmationTool > confirm > should return false when no session flags are set [0.23ms]
+62 |         operation: "edit",
+63 |         filename: "script.js",
+64 |         description: "diff content"
+65 |       };
+66 | 
+67 |       await tool.confirm(params, "bash");
+                      ^
+TypeError: tool.confirm is not a function. (In 'tool.confirm(params, "bash")', 'tool.confirm' is undefined)
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/confirmation-tool.test.ts:67:18)
+      at <anonymous> (/home/clauderun/grok-cli-custom/src/tools/confirmation-tool.test.ts:57:66)
+(fail) ConfirmationTool > confirm > should pass correct parameters to confirmation service [0.17ms]
+
+tests/e2e/cli-commands.test.ts:
+43 | 
+44 | describe('CLI Commands - No API Key Required', () => {
+45 |   test('shows help with --help', async () => {
+46 |     const { stdout, exitCode } = await runGrokCli(['--help']);
+47 |     expect(exitCode).toBe(0);
+48 |     expect(stdout).toContain('grok [options] [message...]');
+                        ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "grok [options] [message...]"
+Received: "Usage: grok [options] [command] [message...]\n\nA conversational AI CLI tool powered by Grok with text editor capabilities\n\nArguments:\n  message                              Initial message to send to Grok\n\nOptions:\n  -V, --version                        output the version number\n  -d, --directory <dir>                set working directory (default:\n                                       \"/home/clauderun/grok-cli-custom\")\n  -k, --api-key <key>                  Grok API key\n  -u, --base-url <url>                 Grok API base URL\n  -m, --model <model>                  AI model to use\n  -p, --prompt [prompt]                process a single prompt and exit\n  -s, --append-system-prompt <prompt>  append to system prompt\n  --max-tool-rounds <rounds>           max tool rounds (default: \"400\")\n  --max-turns <turns>                  limit agent turns\n  --output-format <format>             output format (default: \"text\")\n  --output-file <file>                 save output to file\n  --verbose                            enable verbose logging\n  --dangerously-skip-permissions       skip confirmations\n  -h, --help                           display help for command\n\nCommands:\n  git                                  Git operations with AI assistance\n  telemetry                            Manage OpenTelemetry settings\n  mcp                                  Manage MCP (Model Context Protocol)\n                                       servers"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/e2e/cli-commands.test.ts:48:20)
+(fail) CLI Commands - No API Key Required > shows help with --help [355.68ms]
+(pass) CLI Commands - No API Key Required > shows version with --version [377.55ms]
+killed 1 dangling process
+(fail) CLI Commands - No API Key Required > errors without API key in interactive mode [5001.78ms]
+  ^ this test timed out after 5000ms.
+
+# Unhandled error between tests
+-------------------------------
+58 |     expect(stdout.trim()).toMatch(/\d+\.\d+\.\d+/);
+59 |   });
+60 | 
+61 |   test('errors without API key in interactive mode', async () => {
+62 |     const { stderr, exitCode } = await runGrokCli([]);
+63 |     expect(exitCode).toBe(1);
+                          ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/e2e/cli-commands.test.ts:63:22)
+-------------------------------
+
+killed 1 dangling process
+(fail) CLI Commands - No API Key Required > errors without API key in prompt mode [5002.81ms]
+  ^ this test timed out after 5000ms.
+
+# Unhandled error between tests
+-------------------------------
+64 |     expect(stderr).toContain('API key required');
+65 |   });
+66 | 
+67 |   test('errors without API key in prompt mode', async () => {
+68 |     const { stderr, exitCode } = await runGrokCli(['-p', 'test']);
+69 |     expect(exitCode).toBe(1);
+                          ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/e2e/cli-commands.test.ts:69:22)
+-------------------------------
+
+(pass) CLI Commands - No API Key Required > accepts API key via --api-key flag [395.90ms]
+(pass) CLI Commands - No API Key Required > validates model names [354.74ms]
+(pass) CLI Commands - No API Key Required > accepts valid model names [353.20ms]
+(pass) CLI Commands - No API Key Required > parses --directory flag [355.85ms]
+(pass) CLI Commands - No API Key Required > parses --base-url flag [351.61ms]
+(pass) CLI Commands - No API Key Required > parses --append-system-prompt flag [348.22ms]
+(pass) CLI Commands - No API Key Required > parses --max-tool-rounds flag [375.78ms]
+(pass) CLI Commands - No API Key Required > parses --max-turns flag [345.86ms]
+(pass) CLI Commands - No API Key Required > parses --output-format flag [352.19ms]
+(pass) CLI Commands - No API Key Required > parses --output-file flag [354.38ms]
+(pass) CLI Commands - No API Key Required > parses --verbose flag [373.23ms]
+(pass) CLI Commands - No API Key Required > parses --dangerously-skip-permissions flag [359.28ms]
+killed 1 dangling process
+(fail) CLI Commands - No API Key Required > errors on invalid --output-format [5001.23ms]
+  ^ this test timed out after 5000ms.
+
+# Unhandled error between tests
+-------------------------------
+132 |     expect(exitCode).toBe(0);
+133 |   });
+134 | 
+135 |   test('errors on invalid --output-format', async () => {
+136 |     const { stderr, exitCode } = await runGrokCli(['-k', 'dummy', '--output-format', 'invalid', '-p', 'test']);
+137 |     expect(exitCode).toBe(1);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/e2e/cli-commands.test.ts:137:22)
+-------------------------------
+
+(pass) CLI Commands - No API Key Required > accepts valid output formats [1417.10ms]
+killed 1 dangling process
+(fail) CLI Commands - No API Key Required > shows error for -p without prompt [5000.50ms]
+  ^ this test timed out after 5000ms.
+
+# Unhandled error between tests
+-------------------------------
+146 |     }
+147 |   });
+148 | 
+149 |   test('shows error for -p without prompt', async () => {
+150 |     const { stderr, exitCode } = await runGrokCli(['-k', 'dummy', '-p']);
+151 |     expect(exitCode).toBe(1);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/e2e/cli-commands.test.ts:151:22)
+-------------------------------
+
+(pass) CLI Commands - No API Key Required > accepts positional arguments [343.50ms]
+(pass) Git Subcommand > git subcommand exists [364.31ms]
+(pass) Git Subcommand > git commit-and-push has required options [344.69ms]
+175 |   });
+176 | 
+177 |   test('git commit-and-push errors without API key', async () => {
+178 |     const { stderr, exitCode } = await runGrokCli(['git', 'commit-and-push']);
+179 |     expect(exitCode).toBe(1);
+180 |     expect(stderr).toContain('API key required');
+                         ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "API key required"
+Received: "Command was killed with SIGILL (Invalid machine instruction): bun /home/clauderun/grok-cli-custom/dist/grok.js git commit-and-push\n============================================================\nBun v1.3.1 (89fa0f34) Linux x64\nLinux Kernel v6.1.0 | glibc v2.36\nCPU: sse42 popcnt avx avx2 avx512\nArgs: \"bun\" \"/home/clauderun/grok-cli-custom/dist/grok.js\" \"git\" \"commit-and-push\"\nFeatures: Bun.stderr(2) Bun.stdin(2) Bun.stdout(2) jsc tsconfig \nBuiltins: \"bun:main\" \"node:buffer\" \"node:child_process\" \"node:crypto\" \"node:events\" \"node:fs\" \"node:fs/promises\" \"node:http\" \"node:https\" \"node:module\" \"node:os\" \"node:path\" \"node:process\" \"node:stream\" \"node:tty\" \"node:url\" \"node:util\" \"node:zlib\" \"ws\" \nElapsed: 159ms | User: 144ms | Sys: 30ms\nRSS: 1.11GB | Peak: 0.16GB | Commit: 1.11GB | Faults: 0 | Machine: 16.77GB\n\npanic(main thread): Segmentation fault at address 0x7FFE46505845\noh no: Bun has crashed. This indicates a bug in Bun, not your code.\n\nTo send a redacted crash report to Bun's team,\nplease file a GitHub issue using the link below:\n\n https://bun.report/1.3.1/la189fa0f3QuggQ857k9CA28//BqkshqmC\n"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/e2e/cli-commands.test.ts:180:20)
+(fail) Git Subcommand > git commit-and-push errors without API key [168.58ms]
+(pass) Telemetry Subcommand > telemetry subcommand exists [403.97ms]
+189 |     expect(stdout).toContain('disable');
+190 |   });
+191 | 
+192 |   test('telemetry enable works', async () => {
+193 |     const { stdout, exitCode } = await runGrokCli(['telemetry', 'enable']);
+194 |     expect(exitCode).toBe(0);
+                           ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/e2e/cli-commands.test.ts:194:22)
+(fail) Telemetry Subcommand > telemetry enable works [365.19ms]
+(pass) Telemetry Subcommand > telemetry disable works [389.57ms]
+Starting Grok CLI Conversational Assistant...
+
+  Tips for getting started:
+
+  1. Ask questions, edit files, or run commands.
+  2. Be specific for the best results.
+  3. Create GROK.md files to customize your interactions with Grok.
+  4. Press Shift+Tab to toggle auto-edit mode.
+  5. /help for more information.
+
+
+  Type your request in natural language. Ctrl+C to clear, 'exit' to quit.
+
+
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ ❯ Ask me anything...                                                     │
+  ╰──────────────────────────────────────────────────────────────────────────╯
+
+  ▶ auto-edit: on (shift + tab)  ≋ grok-4-fast-reasoning
+[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[1A[2K[G
+  ERROR Raw mode is not supported on the current process.stdin, which Ink uses
+       as input stream by default.
+       Read about how to prevent this error on
+       https://github.com/vadimdemedes/ink/#israwmodesupported
+
+ - Read about how to prevent this error on
+   https://github.com/vadimdemedes/ink/#israwmodesupported
+ - value (node_modules/ink/build/components/App.js:54:35)
+ - <anonymous> (node_modules/ink/build/hooks/use-input.js:37:9)
+ -commitHookEffectLis (node_modules/react-reconciler/cjs/react-reconciler.devel
+  Mount              opment.js:14817:26)
+ -commitPassiveMountO (node_modules/react-reconciler/cjs/react-reconciler.devel
+  Fiber              opment.js:16648:11)
+ -commitPassiveMountEffect (node_modules/react-reconciler/cjs/react-reconciler.
+  _complete               development.js:16608:9)
+ -commitPassiveMountEffe (node_modules/react-reconciler/cjs/react-reconciler.de
+  ts_begin              velopment.js:16595:7)
+ -commitPassiveMountE (node_modules/react-reconciler/cjs/react-reconciler.devel
+  fects              opment.js:16583:3)
+ -flushPassiveEffect (node_modules/react-reconciler/cjs/react-reconciler.develo
+  Impl              pment.js:19221:3)
+ -flushPassiveEff (node_modules/react-reconciler/cjs/react-reconciler.developme
+  cts            nt.js:19166:14)
+ -<anonymous (node_modules/react-reconciler/cjs/react-reconciler.development.js
+            :18951:9)
+
+(pass) MCP Subcommand > mcp subcommand exists [444.62ms]
+(pass) MCP Subcommand > mcp list works [353.25ms]
+
+tests/integration/cli-flags.test.ts:
+Build output: Bundled 1092 modules in 129ms
+
+  index.js  5.62 MB  (entry point)
+
+(pass) Basic -p mode outputs text response [1683.74ms]
+(pass) -p with --model uses specified Grok model [3454.32ms]
+(pass) -p with --output-format json outputs JSON [2481.95ms]
+102 |   // Test --output-format stream-json with -p (real streaming JSON)
+103 |   test('-p with --output-format stream-json streams JSON lines', async () => {
+104 |     const { stdout, exitCode } = await runGrokCli(['-p', 'Stream test', '--output-format', 'stream-json']);
+105 |     expect(exitCode).toBe(0);
+106 |     const lines = stdout.split('\n').filter(l => l.trim());
+107 |     expect(lines.length).toBeGreaterThan(3); // At least a few real stream chunks
+                               ^
+error: expect(received).toBeGreaterThan(expected)
+
+Expected: > 3
+Received: 1
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/integration/cli-flags.test.ts:107:26)
+(fail) -p with --output-format stream-json streams JSON lines [1672.12ms]
+(pass) -p with --verbose logs model and prompt to stderr [2611.37ms]
+(pass) -p with invalid --model exits with error [351.11ms]
+(pass) -p with stdin input combines with prompt [8048.69ms]
+141 | 
+142 |   // Test --append-system-prompt with -p (real system prompt influence) - FIX: Use short alias -s
+143 |   test('-p with --append-system-prompt adds to system message', async () => {
+144 |     const { stderr, stdout, exitCode } = await runGrokCli(['-p', 'Test system prompt', '-s', 'You are helpful.']); // Use -s alias
+145 |     expect(exitCode).toBe(0);
+146 |     expect(stderr).toContain('Appended system prompt: You are helpful.'); // Log confirms
+                         ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Appended system prompt: You are helpful."
+Received: "No MCP servers configured; only built-in tools are available. Use \"grok mcp add\" to configure external tools."
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/integration/cli-flags.test.ts:146:20)
+(fail) -p with --append-system-prompt adds to system message [1718.84ms]
+(pass) -p with --max-turns limits turns (verbose for logging) [5189.94ms]
+(pass) -p with --dangerously-skip-permissions skips perms [2266.01ms]
+(pass) Positional args treated as -p prompt [2442.12ms]
+(pass) -p with invalid --output-format errors [383.37ms]
+180 | 
+181 |   // Test no prompt with -p errors
+182 |   test('-p with no prompt errors', async () => {
+183 |     const { stderr, exitCode } = await runGrokCli(['-p']);
+184 |     expect(exitCode).toBe(1);
+185 |     expect(stderr).toContain('No prompt provided for print mode');
+                         ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "No prompt provided for print mode"
+Received: "Command failed with exit code 1: bun /home/clauderun/grok-cli-custom/dist/grok.js -p\nError initializing Grok CLI: fullPrompt.trim is not a function. (In 'fullPrompt.trim()', 'fullPrompt.trim' is undefined)"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/integration/cli-flags.test.ts:185:20)
+(fail) -p with no prompt errors [374.93ms]
+188 |   // Test stdin only with -p
+189 |   test('-p with stdin only', async () => {
+190 |     const input = 'Stdin only test';
+191 |     const { stdout, exitCode } = await runGrokCli(['-p'], input);
+192 |     expect(exitCode).toBe(0);
+193 |     expect(stdout.length).toBeGreaterThan(50); // Real response to stdin
+                                ^
+error: expect(received).toBeGreaterThan(expected)
+
+Expected: > 50
+Received: 23
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/integration/cli-flags.test.ts:193:27)
+(fail) -p with stdin only [2737.67ms]
+195 | 
+196 |   // Test interactive mode without -p (timeout expected, no crash)
+197 |   test('Interactive mode without -p launches UI', async () => {
+198 |     const { exitCode, stderr } = await runGrokCli([]); // Empty args
+199 |     // With real API, interactive waits; timeout gives non-zero but no crash error
+200 |     expect(exitCode).not.toBe(0); // Timeout expected
+                               ^
+error: expect(received).not.toBe(expected)
+
+Expected: not 0
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/integration/cli-flags.test.ts:200:26)
+(fail) Interactive mode without -p launches UI [527.85ms]
+
+tests/integration/grok-development.test.ts:
+42 | // Tests for -p in dev mode
+43 | describe('grok-development -p mode', () => {
+44 |   test('Basic -p outputs response', async () => {
+45 |     const { stdout, exitCode } = await runGrokDev(['-p', 'Hello from dev!']);
+46 |     expect(exitCode).toBe(0);
+47 |     expect(stdout).toContain('Grok'); // Assumes response mentions Grok
+                        ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Grok"
+Received: "Hello! Ready to dive into some coding, file edits, or system tasks? What can I help with?"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/integration/grok-development.test.ts:47:20)
+(fail) grok-development -p mode > Basic -p outputs response [1732.19ms]
+(pass) grok-development -p mode > -p with --verbose logs to stderr [2878.17ms]
+(pass) grok-development -p mode > -p with --model uses model [2468.81ms]
+
+tests/integration/tool-usage-fix.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+44 |   describe('JSON Output Format', () => {
+       ^
+error: Expected ")" but found "describe"
+    at /home/clauderun/grok-cli-custom/tests/integration/tool-usage-fix.test.ts:44:3
+-------------------------------
+
+
+tests/unit/confirmation-service-integration.test.ts:
+(pass) Auto-edit enabled by default > ConfirmationService respects allOperations flag [0.15ms]
+(pass) Auto-edit enabled by default > enableAutoEdit logic with nullish coalescing [0.11ms]
+(pass) Auto-edit enabled by default > confirmation service singleton pattern works [0.06ms]
+
+tests/unit/cli-options.test.ts:
+(pass) CLI Options Parsing > parses --directory flag [0.44ms]
+(pass) CLI Options Parsing > parses -d alias [0.18ms]
+(pass) CLI Options Parsing > parses --api-key flag [0.15ms]
+(pass) CLI Options Parsing > parses -k alias [0.12ms]
+(pass) CLI Options Parsing > parses --base-url flag [0.10ms]
+(pass) CLI Options Parsing > parses -u alias [0.13ms]
+(pass) CLI Options Parsing > parses --model flag [0.09ms]
+(pass) CLI Options Parsing > parses -m alias [0.11ms]
+(pass) CLI Options Parsing > parses --prompt flag with value [0.10ms]
+(pass) CLI Options Parsing > parses -p alias [0.14ms]
+(pass) CLI Options Parsing > parses --append-system-prompt flag [0.13ms]
+(pass) CLI Options Parsing > parses -s alias [0.12ms]
+(pass) CLI Options Parsing > parses --max-tool-rounds flag [0.12ms]
+93 |     expect(options.maxToolRounds).toBe('100');
+94 |   });
+95 | 
+96 |   test('defaults --max-tool-rounds to 400', () => {
+97 |     const options = parseArgs([]);
+98 |     expect(options.maxToolRounds).toBe('400');
+                                       ^
+error: expect(received).toBe(expected)
+
+Expected: "400"
+Received: "100"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/unit/cli-options.test.ts:98:35)
+(fail) CLI Options Parsing > defaults --max-tool-rounds to 400 [0.24ms]
+(pass) CLI Options Parsing > parses --max-turns flag [0.15ms]
+(pass) CLI Options Parsing > parses --output-format flag [0.15ms]
+108 |     expect(options.outputFormat).toBe('json');
+109 |   });
+110 | 
+111 |   test('defaults --output-format to text', () => {
+112 |     const options = parseArgs([]);
+113 |     expect(options.outputFormat).toBe('text');
+                                       ^
+error: expect(received).toBe(expected)
+
+Expected: "text"
+Received: "json"
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/unit/cli-options.test.ts:113:34)
+(fail) CLI Options Parsing > defaults --output-format to text [0.25ms]
+(pass) CLI Options Parsing > parses --output-file flag [0.16ms]
+(pass) CLI Options Parsing > parses --verbose flag [0.16ms]
+(pass) CLI Options Parsing > parses --dangerously-skip-permissions flag [0.11ms]
+128 |     expect(options.dangerouslySkipPermissions).toBe(true);
+129 |   });
+130 | 
+131 |   test('parses positional arguments as message', () => {
+132 |     const parsed = testProgram.parse(['node', 'test', 'hello', 'world'], { from: 'user' });
+133 |     expect(parsed.args).toEqual(['hello', 'world']);
+                              ^
+error: expect(received).toEqual(expected)
+
+  [
++   "node",
++   "test",
+    "hello",
+    "world",
+  ]
+
+- Expected  - 0
++ Received  + 2
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/unit/cli-options.test.ts:133:25)
+(fail) CLI Options Parsing > parses positional arguments as message [0.26ms]
+(pass) loadModel validation > accepts valid Grok models [0.38ms]
+(pass) loadModel validation > rejects invalid models [0.20ms]
+151 | 
+152 | describe('Git subcommand options', () => {
+153 |   const gitCommand = program.commands.find(c => c.name() === 'git');
+154 |   if (gitCommand) {
+155 |     test('git commit-and-push has directory option', () => {
+156 |       expect(gitCommand.options.some(opt => opt.flags.includes('--directory'))).toBe(true);
+                                                                                      ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/unit/cli-options.test.ts:156:81)
+(fail) Git subcommand options > git commit-and-push has directory option [0.08ms]
+155 |     test('git commit-and-push has directory option', () => {
+156 |       expect(gitCommand.options.some(opt => opt.flags.includes('--directory'))).toBe(true);
+157 |     });
+158 | 
+159 |     test('git commit-and-push has api-key option', () => {
+160 |       expect(gitCommand.options.some(opt => opt.flags.includes('--api-key'))).toBe(true);
+                                                                                    ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/unit/cli-options.test.ts:160:79)
+(fail) Git subcommand options > git commit-and-push has api-key option [0.07ms]
+159 |     test('git commit-and-push has api-key option', () => {
+160 |       expect(gitCommand.options.some(opt => opt.flags.includes('--api-key'))).toBe(true);
+161 |     });
+162 | 
+163 |     test('git commit-and-push has model option', () => {
+164 |       expect(gitCommand.options.some(opt => opt.flags.includes('--model'))).toBe(true);
+                                                                                  ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/unit/cli-options.test.ts:164:77)
+(fail) Git subcommand options > git commit-and-push has model option [0.05ms]
+163 |     test('git commit-and-push has model option', () => {
+164 |       expect(gitCommand.options.some(opt => opt.flags.includes('--model'))).toBe(true);
+165 |     });
+166 | 
+167 |     test('git commit-and-push has max-tool-rounds option', () => {
+168 |       expect(gitCommand.options.some(opt => opt.flags.includes('--max-tool-rounds'))).toBe(true);
+                                                                                            ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/home/clauderun/grok-cli-custom/tests/unit/cli-options.test.ts:168:87)
+(fail) Git subcommand options > git commit-and-push has max-tool-rounds option [0.07ms]
+(pass) Telemetry subcommand > telemetry has enable subcommand [0.05ms]
+(pass) Telemetry subcommand > telemetry has disable subcommand [0.04ms]
+(pass) MCP subcommand > mcp has add subcommand [0.04ms]
+(pass) MCP subcommand > mcp has list subcommand [0.04ms]
+(pass) MCP subcommand > mcp has test subcommand [0.04ms]
+(pass) MCP subcommand > mcp has remove subcommand [0.04ms]
+
+tests/unit/auto-edit-default.test.ts:
+(pass) Auto-edit default behavior > dangerouslySkipPermissions defaults to undefined when not provided [0.03ms]
+(pass) Auto-edit default behavior > dangerouslySkipPermissions can be explicitly set to true [0.01ms]
+(pass) Auto-edit default behavior > dangerouslySkipPermissions respects explicit false (future-proofing) [0.01ms]
+(pass) Auto-edit default behavior > nullish coalescing works correctly for auto-edit default [0.02ms]
+
+34 tests failed:
+(fail) TextEditorTool > replaceLines > should replace lines in file [1.03ms]
+(fail) TextEditorTool > insert > should insert content at line [0.75ms]
+(fail) BashTool > execute > should execute successful command [7.33ms]
+(fail) BashTool > execute > should handle command with stderr [3.54ms]
+(fail) MorphEditorTool > editFile > should successfully edit file with valid response [0.93ms]
+(fail) MorphEditorTool > editFile > should handle API error [0.26ms]
+(fail) MorphEditorTool > editFile > should handle network error [0.18ms]
+(fail) MorphEditorTool > editFile > should handle malformed response [0.20ms]
+(fail) ConfirmationTool > confirm > should return true when session flag is set for all operations [0.24ms]
+(fail) ConfirmationTool > confirm > should return true when session flag is set for file operations [0.15ms]
+(fail) ConfirmationTool > confirm > should return false when no session flags are set [0.23ms]
+(fail) ConfirmationTool > confirm > should pass correct parameters to confirmation service [0.17ms]
+(fail) CLI Commands - No API Key Required > shows help with --help [355.68ms]
+(fail) CLI Commands - No API Key Required > errors without API key in interactive mode [5001.78ms]
+  ^ this test timed out after 5000ms.
+(fail) CLI Commands - No API Key Required > errors without API key in prompt mode [5002.81ms]
+  ^ this test timed out after 5000ms.
+(fail) CLI Commands - No API Key Required > errors on invalid --output-format [5001.23ms]
+  ^ this test timed out after 5000ms.
+(fail) CLI Commands - No API Key Required > shows error for -p without prompt [5000.50ms]
+  ^ this test timed out after 5000ms.
+(fail) Git Subcommand > git commit-and-push errors without API key [168.58ms]
+(fail) Telemetry Subcommand > telemetry enable works [365.19ms]
+(fail) -p with --output-format stream-json streams JSON lines [1672.12ms]
+(fail) -p with --append-system-prompt adds to system message [1718.84ms]
+(fail) -p with no prompt errors [374.93ms]
+(fail) -p with stdin only [2737.67ms]
+(fail) Interactive mode without -p launches UI [527.85ms]
+(fail) grok-development -p mode > Basic -p outputs response [1732.19ms]
+(fail) CLI Options Parsing > defaults --max-tool-rounds to 400 [0.24ms]
+(fail) CLI Options Parsing > defaults --output-format to text [0.25ms]
+(fail) CLI Options Parsing > parses positional arguments as message [0.26ms]
+(fail) Git subcommand options > git commit-and-push has directory option [0.08ms]
+(fail) Git subcommand options > git commit-and-push has api-key option [0.07ms]
+(fail) Git subcommand options > git commit-and-push has model option [0.05ms]
+(fail) Git subcommand options > git commit-and-push has max-tool-rounds option [0.07ms]
+
+ 116 pass
+ 34 fail
+ 6 errors
+ 271 expect() calls
+Ran 150 tests across 15 files. [73.78s]

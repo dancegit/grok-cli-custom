@@ -1,0 +1,2 @@
+This is stdin content
+Combine with stdin

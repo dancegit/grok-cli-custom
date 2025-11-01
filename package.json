@@ -1,11 +1,12 @@
 {
   "name": "@vibe-kit/grok-cli",
   "version": "0.0.36",
+  "type": "module",
   "bin": {
     "grok": "dist/grok.js"
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outfile=dist/grok.js --target=bun --external=yoga-wasm-web && chmod +x dist/grok.js",
+    "build": "bun build ./src/index.ts --outdir=dist --outfile=grok.js --external=yoga-wasm-web --target=bun && chmod +x dist/grok.js",
     "build:watch": "watchexec -r -e ts,tsx -- \"bun run build\"",
     "dev": "bun run src/index.ts",
     "start": "bun dist/grok.js"
@@ -23,7 +24,9 @@
     "commander": "^12.0.0",
     "dotenv": "^16.4.0",
     "enquirer": "^2.4.1",
-    "fs-extra": "^11.2.0",
+    "@bearz/fs": "^0.1.0",
+  
+
     "ink": "^4.4.1",
     "marked": "^15.0.12",
     "marked-terminal": "^7.3.0",
@@ -36,7 +39,8 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.2.0",
-    "@types/fs-extra": "^11.0.2",
+  
+
     "@types/node": "^20.8.0",
     "@types/react": "^18.3.3",
     "@typescript-eslint/eslint-plugin": "^8.37.0",

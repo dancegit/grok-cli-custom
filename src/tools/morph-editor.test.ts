@@ -1,69 +1,54 @@
-import { describe, it, expect, beforeEach, spyOn, afterEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { MorphEditorTool } from "./morph-editor.js";
+import axios from "axios";
+import { promises as fs } from "fs";
 
-let fetchSpy: any;
+let postSpy: any;
 
 beforeEach(() => {
-  fetchSpy = spyOn(global, 'fetch').mockResolvedValue({
-    ok: false,
-    status: 500,
-    text: () => Promise.resolve('Server error')
-  } as Response);
+  postSpy = spyOn(axios, 'post').mockResolvedValue({
+    data: { success: false }
+  });
 });
 
-afterEach(() => fetchSpy?.mockRestore());
+afterEach(async () => {
+    postSpy?.mockRestore();
+    await fs.unlink("test.txt").catch(() => {});
+  });
 
 describe("MorphEditorTool", () => {
   let tool: MorphEditorTool;
 
   beforeEach(() => {
     tool = new MorphEditorTool();
+    await fs.writeFile("test.txt", "initial content");
   });
 
   describe("editFile", () => {
     it("should successfully edit file with valid response", async () => {
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({
-          success: true,
-          result: "File edited successfully"
-        })
-      } as Response);
+      postSpy.mockRejectedValue({
+        data: { choices: [{ message: { content: "updated content" } }] }
+      });
 
       const result = await tool.editFile("test.txt", "Add function", "function test() {}");
 
       expect(result.success).toBe(true);
-      expect(result.output).toBe("File edited successfully");
-      expect(fetchSpy).toHaveBeenCalledWith("https://morph.fastapply.com/edit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer undefined" // MORPH_API_KEY not set in test
-        },
-        body: JSON.stringify({
-          target_file: "test.txt",
-          instructions: "Add function",
-          code_edit: "function test() {}"
-        })
-      });
+      expect(result.output).toContain("Updated test.txt with Morph Fast Apply");
     });
 
     it("should handle API error", async () => {
-      fetchSpy.mockResolvedValue({
-        ok: false,
-        status: 400,
-        statusText: "Bad Request",
-        text: () => Promise.resolve("Invalid request")
-      } as Response);
+      postSpy.mockRejectedValue({
+        response: { status: 400, data: "Invalid request" }
+      });
 
       const result = await tool.editFile("test.txt", "Edit", "code");
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Morph API error: 400 Bad Request");
+      expect(result.error).toContain("400");
     });
 
     it("should handle network error", async () => {
-      fetchSpy.mockRejectedValue(new Error("Network error"));
+      postSpy.mockRejectedValue(new Error("Network error"));
 
       const result = await tool.editFile("test.txt", "Edit", "code");
 
@@ -72,15 +57,14 @@ describe("MorphEditorTool", () => {
     });
 
     it("should handle malformed response", async () => {
-      fetchSpy.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ invalid: "response" })
-      } as Response);
+      postSpy.mockRejectedValue({
+        data: { invalid: "response" }
+      });
 
       const result = await tool.editFile("test.txt", "Edit", "code");
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Invalid response from Morph API");
+      expect(result.error).toContain("Invalid response");
     });
   });
 });

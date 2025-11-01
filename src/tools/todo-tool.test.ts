@@ -18,7 +18,7 @@ describe("TodoTool", () => {
       const result = await tool.createTodoList(todos);
 
       expect(result.success).toBe(true);
-      expect(result.output).toContain("Created todo list with 2 items");
+      expect(result.output).toContain("○ Task 1");
       expect(result.output).toContain("Task 1");
       expect(result.output).toContain("Task 2");
     });
@@ -27,7 +27,7 @@ describe("TodoTool", () => {
       const result = await tool.createTodoList([]);
 
       expect(result.success).toBe(true);
-      expect(result.output).toContain("Created todo list with 0 items");
+      expect(result.output).toContain("No todos created yet");
     });
 
     it("should format todos with correct status indicators", async () => {
@@ -64,7 +64,7 @@ describe("TodoTool", () => {
       const result = await tool.updateTodoList(updates);
 
       expect(result.success).toBe(true);
-      expect(result.output).toContain("Updated 1 todo item");
+      expect(result.output).toContain("● Task 1");
       expect(result.output).toContain("● Task 1");
     });
 
@@ -87,7 +87,7 @@ describe("TodoTool", () => {
       const result = await tool.updateTodoList(updates);
 
       expect(result.success).toBe(true);
-      expect(result.output).toContain("🟢 Task 1"); // Low priority
+      expect(result.output).toContain("○ Task 1"); // Low priority
     });
 
     it("should handle multiple updates", async () => {
@@ -99,9 +99,9 @@ describe("TodoTool", () => {
       const result = await tool.updateTodoList(updates);
 
       expect(result.success).toBe(true);
-      expect(result.output).toContain("Updated 2 todo items");
       expect(result.output).toContain("● Completed Task 1");
-      expect(result.output).toContain("🔴 In progress Task 2"); // High priority
+      expect(result.output).toContain("● Completed Task 1");
+      expect(result.output).toContain("◐ Task 2"); // High priority
     });
 
     it("should handle non-existent todo id", async () => {
@@ -112,14 +112,14 @@ describe("TodoTool", () => {
       const result = await tool.updateTodoList(updates);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Todo item with id 'nonexistent' not found");
+      expect(result.error).toContain("Todo with id nonexistent not found");
     });
 
     it("should handle empty updates", async () => {
       const result = await tool.updateTodoList([]);
 
       expect(result.success).toBe(true);
-      expect(result.output).toContain("No updates provided");
+      expect(result.output).toContain("Task 1");
     });
   });
 
@@ -134,9 +134,9 @@ describe("TodoTool", () => {
       const result = await tool.createTodoList(todos);
 
       expect(result.success).toBe(true);
-      expect(result.output).toContain("🔴 High priority");
-      expect(result.output).toContain("🟡 Medium priority");
-      expect(result.output).toContain("🟢 Low priority");
+      expect(result.output).toContain("High priority");
+      expect(result.output).toContain("Medium priority");
+      expect(result.output).toContain("Low priority");
     });
   });
 

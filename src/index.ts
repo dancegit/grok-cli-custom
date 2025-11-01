@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Force Bun to bundle yoga.wasm
 //
-import "yoga-wasm-web/dist/yoga.wasm";
 import React from "react";
 import { render } from "ink";
 import { program } from "commander";

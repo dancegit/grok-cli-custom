@@ -1,11 +1,11 @@
 import { SearchTool } from "./search.js";
-import { jest } from "@jest/globals";
-import fs from "fs-extra";
+
+import * as fs from "fs";
 import { glob } from "glob";
 import * as path from "path";
 
 // Mock dependencies
-jest.mock("fs-extra");
+ 
 jest.mock("glob");
 jest.mock("path");
 

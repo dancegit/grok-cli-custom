@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { ToolResult } from "../types/index.js";
 import { ConfirmationService } from "../utils/confirmation-service.js";
-import * as fs from "fs-extra";
+import * as fs from "fs";
 import * as path from "path";
 
 export interface SearchResult {
@@ -272,7 +272,7 @@ export class SearchTool {
       if (depth > 10 || files.length >= maxResults) return; // Prevent infinite recursion and limit results
 
       try {
-        const entries = await fs.readdir(dir, { withFileTypes: true });
+        const entries = fs.readDir(dir);
 
         for (const entry of entries) {
           if (files.length >= maxResults) break;
