@@ -1,27 +1,31 @@
-import { BashTool } from "./bash.js";
-import { jest } from "@jest/globals";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { describe, it, expect, mock, beforeEach } from "bun:test";
 
-// Mock child_process
-jest.mock("child_process");
-jest.mock("util");
+// Mock child_process and util
+const execMock = mock();
+const promisifyMock = mock();
 
-const mockedExec = exec as jest.MockedFunction<typeof exec>;
-const mockedPromisify = promisify as jest.MockedFunction<typeof promisify>;
+mock.module("child_process", () => ({
+  exec: execMock
+}));
+
+mock.module("util", () => ({
+  promisify: promisifyMock
+}));
 
 describe("BashTool", () => {
-  let tool: BashTool;
+  let tool: any;
 
-  beforeEach(() => {
-    tool = new BashTool();
-    jest.clearAllMocks();
+  beforeEach(async () => {
+    const module = await import("./bash.js");
+    tool = new module.BashTool();
+    execMock.mockReset();
+    promisifyMock.mockReset();
   });
 
   describe("execute", () => {
     it("should execute successful command", async () => {
       const mockResult = { stdout: "output", stderr: "" };
-      mockedPromisify.mockReturnValue(jest.fn().mockResolvedValue(mockResult));
+      promisifyMock.mockReturnValue(mock(() => Promise.resolve(mockResult)));
 
       const result = await tool.execute("ls -la");
 
@@ -31,7 +35,7 @@ describe("BashTool", () => {
 
     it("should handle command with stderr", async () => {
       const mockResult = { stdout: "output", stderr: "warning" };
-      mockedPromisify.mockReturnValue(jest.fn().mockResolvedValue(mockResult));
+      promisifyMock.mockReturnValue(mock(() => Promise.resolve(mockResult)));
 
       const result = await tool.execute("command with warning");
 
@@ -43,7 +47,7 @@ describe("BashTool", () => {
       const mockError = new Error("Command failed");
       (mockError as any).stdout = "";
       (mockError as any).stderr = "error message";
-      mockedPromisify.mockReturnValue(jest.fn().mockRejectedValue(mockError));
+      promisifyMock.mockReturnValue(mock(() => Promise.reject(mockError)));
 
       const result = await tool.execute("invalid command");
 
@@ -56,7 +60,7 @@ describe("BashTool", () => {
       (mockError as any).code = 1;
       (mockError as any).stdout = "partial output";
       (mockError as any).stderr = "error";
-      mockedPromisify.mockReturnValue(jest.fn().mockRejectedValue(mockError));
+      promisifyMock.mockReturnValue(mock(() => Promise.reject(mockError)));
 
       const result = await tool.execute("failing command");
 
