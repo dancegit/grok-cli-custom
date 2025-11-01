@@ -7,6 +7,20 @@ export class TextEditorTool {
   private editHistory: EditorCommand[] = [];
   private confirmationService = ConfirmationService.getInstance();
 
+  /**
+   * Helper method to read file with better error messages
+   */
+  private async readFileWithErrorHandling(filePath: string): Promise<string> {
+    try {
+      return await fs.readFile(filePath, "utf-8");
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        throw new Error(`File not found: ${filePath}`);
+      }
+      throw error;
+    }
+  }
+
   async view(
     filePath: string,
     viewRange?: [number, number]
@@ -77,12 +91,7 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      const content = await fs.readFile(resolvedPath, "utf-8").catch((error: any) => {
-        if (error.code === 'ENOENT') {
-          throw new Error(`File not found: ${filePath}`);
-        }
-        throw error;
-      });
+      const content = await this.readFileWithErrorHandling(resolvedPath);
 
       if (!content.includes(oldStr)) {
         if (oldStr.includes('\n')) {
@@ -234,12 +243,7 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      const fileContent = await fs.readFile(resolvedPath, "utf-8").catch((error: any) => {
-        if (error.code === 'ENOENT') {
-          throw new Error(`File not found: ${filePath}`);
-        }
-        throw error;
-      });
+      const fileContent = await this.readFileWithErrorHandling(resolvedPath);
       const lines = fileContent.split("\n");
       
       if (startLine < 1 || startLine > lines.length) {
@@ -319,12 +323,7 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      const fileContent = await fs.readFile(resolvedPath, "utf-8").catch((error: any) => {
-        if (error.code === 'ENOENT') {
-          throw new Error(`File not found: ${filePath}`);
-        }
-        throw error;
-      });
+      const fileContent = await this.readFileWithErrorHandling(resolvedPath);
       const lines = fileContent.split("\n");
 
       lines.splice(insertLine - 1, 0, content);
