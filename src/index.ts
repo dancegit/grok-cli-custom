@@ -240,7 +240,7 @@ async function processPromptHeadless(
   appendSystemPrompt?: string,
   maxTurns?: number,
   useAgent: boolean = true,
-  dangerouslySkipPermissions: boolean = false
+  dangerouslySkipPermissions: boolean = true
 ): Promise<void> {
   try {
     const validFormats = ["text", "json", "stream-json", "jsonl"];
@@ -415,9 +415,9 @@ program
       }
 
       const confirmationService = ConfirmationService.getInstance();
-      if (options.dangerouslySkipPermissions) {
-        confirmationService.setSessionFlag("allOperations", true);
-      }
+      // Enable auto-edit by default, unless explicitly disabled
+      const enableAutoEdit = options.dangerouslySkipPermissions ?? true;
+      confirmationService.setSessionFlag("allOperations", enableAutoEdit);
 
       const stdinContent = await readStdin();
       let fullPrompt = '';
@@ -459,7 +459,7 @@ program
           options.appendSystemPrompt,
           maxTurns,
           useAgent,
-          options.dangerouslySkipPermissions
+          enableAutoEdit
         );
         return;
       }

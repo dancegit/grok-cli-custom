@@ -168,15 +168,18 @@ Options:
   -k, --api-key <key>             Grok API key
   -u, --base-url <url>            Custom API endpoint
   -m, --model <model>             AI model (e.g. grok-code-fast-1)
-  -p, --prompt [prompt]           Headless mode
+  -p, --prompt [prompt]           Headless mode (auto-edit enabled by default)
   -s, --append-system-prompt      Add to system prompt
   --max-tool-rounds <n>           Max tool calls (default: 400)
   --max-turns <n>                 Max agent turns
   --output-format <format>        text | json | jsonl | stream-json
   --output-file <file>            Save output to file
   --verbose                       Enable debug logs
-  --dangerously-skip-permissions  Auto-approve all actions
+  --dangerously-skip-permissions  Auto-approve all actions (enabled by default)
 ```
+
+**Note:** Auto-edit (automatic approval of file operations and bash commands) is now **enabled by default** in both interactive and headless modes. The `--dangerously-skip-permissions` flag is kept for backward compatibility and explicit confirmation of this behavior.
+
 
 ---
 
