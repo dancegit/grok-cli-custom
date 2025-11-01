@@ -24,15 +24,14 @@ describe("TextEditorTool", () => {
 
   beforeEach(() => {
     tool = new TextEditorTool();
-    
   });
 
   describe("view", () => {
     it("should view file contents", async () => {
       const mockContent = "line1\nline2\nline3";
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.stat.= mock(() => Promise.resolve({ isDirectory: () => false } as any));
-      mockedFs.readFile.= mock(() => Promise.resolve(mockContent));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.stat.mockResolvedValue({ isDirectory: () => false } as any);
+      mockedFs.readFile.mockResolvedValue(mockContent);
 
       const result = await tool.view("test.txt");
 
@@ -45,9 +44,9 @@ describe("TextEditorTool", () => {
 
     it("should view directory contents", async () => {
       const mockFiles = ["file1.txt", "file2.txt"];
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.stat.= mock(() => Promise.resolve({ isDirectory: () => true } as any));
-      mockedFs.readdir.= mock(() => Promise.resolve(mockFiles as any));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.stat.mockResolvedValue({ isDirectory: () => true } as any);
+      mockedFs.readdir.mockResolvedValue(mockFiles as any);
 
       const result = await tool.view("testdir");
 
@@ -58,7 +57,7 @@ describe("TextEditorTool", () => {
     });
 
     it("should handle file not found", async () => {
-      mockedFs.pathExists.= mock(() => Promise.resolve(false));
+      mockedFs.pathExists.mockResolvedValue(false);
 
       const result = await tool.view("nonexistent.txt");
 
@@ -68,9 +67,9 @@ describe("TextEditorTool", () => {
 
     it("should view partial file with range", async () => {
       const mockContent = "line1\nline2\nline3\nline4";
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.stat.= mock(() => Promise.resolve({ isDirectory: () => false } as any));
-      mockedFs.readFile.= mock(() => Promise.resolve(mockContent));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.stat.mockResolvedValue({ isDirectory: () => false } as any);
+      mockedFs.readFile.mockResolvedValue(mockContent);
 
       const result = await tool.view("test.txt", [2, 3]);
 
@@ -85,9 +84,9 @@ describe("TextEditorTool", () => {
 
   describe("create", () => {
     it("should create a new file", async () => {
-      mockedFs.pathExists.= mock(() => Promise.resolve(false));
-      mockedFs.ensureDir.= mock(() => Promise.resolve());
-      mockedFs.writeFile.= mock(() => Promise.resolve());
+      mockedFs.pathExists.mockResolvedValue(false);
+      mockedFs.ensureDir.mockResolvedValue();
+      mockedFs.writeFile.mockResolvedValue();
 
       const result = await tool.create("newfile.txt", "content");
 
@@ -98,8 +97,8 @@ describe("TextEditorTool", () => {
     });
 
     it("should handle creation error", async () => {
-      mockedFs.pathExists.= mock(() => Promise.resolve(false));
-      mockedFs.ensureDir.= mock(() => Promise.reject(new Error("Permission denied")));
+      mockedFs.pathExists.mockResolvedValue(false);
+      mockedFs.ensureDir.mockRejectedValue(new Error("Permission denied"));
 
       const result = await tool.create("newfile.txt", "content");
 
@@ -112,8 +111,8 @@ describe("TextEditorTool", () => {
     it("should replace text in file", async () => {
       const originalContent = "old text";
       const newContent = "new text";
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.readFile.= mock(() => Promise.resolve(originalContent));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.readFile.mockResolvedValue(originalContent);
 
       const result = await tool.strReplace("test.txt", "old", "new");
 
@@ -122,8 +121,8 @@ describe("TextEditorTool", () => {
     });
 
     it("should handle string not found", async () => {
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.readFile.= mock(() => Promise.resolve("content without target"));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.readFile.mockResolvedValue("content without target");
 
       const result = await tool.strReplace("test.txt", "notfound", "replacement");
 
@@ -134,8 +133,8 @@ describe("TextEditorTool", () => {
     it("should replace all occurrences when replaceAll is true", async () => {
       const originalContent = "old old old";
       const expectedContent = "new new new";
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.readFile.= mock(() => Promise.resolve(originalContent));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.readFile.mockResolvedValue(originalContent);
 
       const result = await tool.strReplace("test.txt", "old", "new", true);
 
@@ -148,8 +147,8 @@ describe("TextEditorTool", () => {
     it("should replace lines in file", async () => {
       const originalContent = "line1\nline2\nline3\nline4";
       const expectedContent = "line1\nnewcontent\nline4";
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.readFile.= mock(() => Promise.resolve(originalContent));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.readFile.mockResolvedValue(originalContent);
 
       const result = await tool.replaceLines("test.txt", 2, 3, "newcontent");
 
@@ -158,8 +157,8 @@ describe("TextEditorTool", () => {
     });
 
     it("should handle invalid line range", async () => {
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.readFile.= mock(() => Promise.resolve("line1\nline2"));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.readFile.mockResolvedValue("line1\nline2");
 
       const result = await tool.replaceLines("test.txt", 1, 10, "content");
 
@@ -172,8 +171,8 @@ describe("TextEditorTool", () => {
     it("should insert content at line", async () => {
       const originalContent = "line1\nline3";
       const expectedContent = "line1\ninserted\nline3";
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.readFile.= mock(() => Promise.resolve(originalContent));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.readFile.mockResolvedValue(originalContent);
 
       const result = await tool.insert("test.txt", 2, "inserted");
 
@@ -185,12 +184,12 @@ describe("TextEditorTool", () => {
   describe("undoEdit", () => {
     it("should undo last edit", async () => {
       // First create a file
-      mockedFs.pathExists.= mock(() => Promise.resolve(true));
-      mockedFs.readFile.= mock(() => Promise.resolve("old"));
+      mockedFs.pathExists.mockResolvedValue(true);
+      mockedFs.readFile.mockResolvedValue("old");
       await tool.strReplace("test.txt", "old", "new");
 
       // Then undo
-      mockedFs.readFile.= mock(() => Promise.resolve("new"));
+      mockedFs.readFile.mockResolvedValue("new");
 
       const result = await tool.undoEdit();
 
