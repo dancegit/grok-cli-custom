@@ -1,33 +1,40 @@
+import { describe, it, expect, beforeEach, spyOn, afterEach } from "bun:test";
 import { MorphEditorTool } from "./morph-editor.js";
-import { jest } from "@jest/globals";
 
-// Mock fetch
-global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+let fetchSpy: any;
+
+beforeEach(() => {
+  fetchSpy = spyOn(global, 'fetch').mockResolvedValue({
+    ok: false,
+    status: 500,
+    text: () => Promise.resolve('Server error')
+  } as Response);
+});
+
+afterEach(() => fetchSpy?.mockRestore());
 
 describe("MorphEditorTool", () => {
   let tool: MorphEditorTool;
 
   beforeEach(() => {
     tool = new MorphEditorTool();
-    jest.clearAllMocks();
   });
 
   describe("editFile", () => {
     it("should successfully edit file with valid response", async () => {
-      const mockResponse = {
+      fetchSpy.mockResolvedValue({
         ok: true,
-        json: jest.fn().mockResolvedValue({
+        json: () => Promise.resolve({
           success: true,
           result: "File edited successfully"
         })
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+      } as Response);
 
       const result = await tool.editFile("test.txt", "Add function", "function test() {}");
 
       expect(result.success).toBe(true);
       expect(result.output).toBe("File edited successfully");
-      expect(global.fetch).toHaveBeenCalledWith("https://morph.fastapply.com/edit", {
+      expect(fetchSpy).toHaveBeenCalledWith("https://morph.fastapply.com/edit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -42,13 +49,12 @@ describe("MorphEditorTool", () => {
     });
 
     it("should handle API error", async () => {
-      const mockResponse = {
+      fetchSpy.mockResolvedValue({
         ok: false,
         status: 400,
         statusText: "Bad Request",
-        text: jest.fn().mockResolvedValue("Invalid request")
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+        text: () => Promise.resolve("Invalid request")
+      } as Response);
 
       const result = await tool.editFile("test.txt", "Edit", "code");
 
@@ -57,7 +63,7 @@ describe("MorphEditorTool", () => {
     });
 
     it("should handle network error", async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error("Network error"));
+      fetchSpy.mockRejectedValue(new Error("Network error"));
 
       const result = await tool.editFile("test.txt", "Edit", "code");
 
@@ -66,11 +72,10 @@ describe("MorphEditorTool", () => {
     });
 
     it("should handle malformed response", async () => {
-      const mockResponse = {
+      fetchSpy.mockResolvedValue({
         ok: true,
-        json: jest.fn().mockResolvedValue({ invalid: "response" })
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+        json: () => Promise.resolve({ invalid: "response" })
+      } as Response);
 
       const result = await tool.editFile("test.txt", "Edit", "code");
 

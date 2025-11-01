@@ -1,12 +1,11 @@
 import { TodoTool } from "./todo-tool.js";
-import { jest } from "@jest/globals";
+import { describe, it, expect, beforeEach } from "bun:test";
 
 describe("TodoTool", () => {
   let tool: TodoTool;
 
   beforeEach(() => {
     tool = new TodoTool();
-    jest.clearAllMocks();
   });
 
   describe("createTodoList", () => {

@@ -1,12 +1,11 @@
 import { ConfirmationTool } from "./confirmation-tool.js";
-import { jest } from "@jest/globals";
+import { describe, it, expect, beforeEach, mock } from "bun:test";
 
 describe("ConfirmationTool", () => {
   let tool: ConfirmationTool;
 
   beforeEach(() => {
     tool = new ConfirmationTool();
-    jest.clearAllMocks();
   });
 
   describe("confirm", () => {
@@ -36,7 +35,7 @@ describe("ConfirmationTool", () => {
 
     it("should return false when no session flags are set", async () => {
       // Mock the confirmation service to return false
-      const mockConfirm = jest.fn().mockResolvedValue({ confirmed: false, feedback: "User rejected" });
+      const mockConfirm = mock(() => Promise.resolve({ confirmed: false, feedback: "User rejected" }));
       (tool as any).confirmationService = { requestConfirmation: mockConfirm };
 
       const result = await tool.confirm({
@@ -54,7 +53,7 @@ describe("ConfirmationTool", () => {
     });
 
     it("should pass correct parameters to confirmation service", async () => {
-      const mockConfirm = jest.fn().mockResolvedValue({ confirmed: true });
+      const mockConfirm = mock(() => Promise.resolve({ confirmed: true }));
       (tool as any).confirmationService = { requestConfirmation: mockConfirm };
 
       const params = {
