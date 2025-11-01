@@ -13,8 +13,8 @@ export class TextEditorTool {
   private async readFileWithErrorHandling(filePath: string): Promise<string> {
     try {
       return await fs.readFile(filePath, "utf-8");
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
         throw new Error(`File not found: ${filePath}`);
       }
       throw error;
@@ -29,7 +29,6 @@ export class TextEditorTool {
       const resolvedPath = path.resolve(filePath);
 
       try {
-        await fs.access(resolvedPath);
         const stats = await fs.stat(resolvedPath);
 
         if (stats.isDirectory()) {
