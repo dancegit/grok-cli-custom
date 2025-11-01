@@ -15,50 +15,45 @@ export class TextEditorTool {
       const resolvedPath = path.resolve(filePath);
 
       try {
-        // Check if file/directory exists
         await fs.access(resolvedPath);
-        
-        // Try to read as file first
-        try {
-          const content = await fs.readFile(resolvedPath, "utf-8");
-          const lines = content.split("\n");
+        const stats = await fs.stat(resolvedPath);
 
-          if (viewRange) {
-            const [start, end] = viewRange;
-            const selectedLines = lines.slice(start - 1, end);
-            const numberedLines = selectedLines
-              .map((line, idx) => `${start + idx}: ${line}`)
-              .join("\n");
+        if (stats.isDirectory()) {
+          const files = await fs.readdir(resolvedPath);
+          return {
+            success: true,
+            output: `Directory contents of ${filePath}:\n${files.join("\n")}`,
+          };
+        }
 
-            return {
-              success: true,
-              output: `Lines ${start}-${end} of ${filePath}:\n${numberedLines}`,
-            };
-          }
+        const content = await fs.readFile(resolvedPath, "utf-8");
+        const lines = content.split("\n");
 
-          const totalLines = lines.length;
-          const displayLines = totalLines > 10 ? lines.slice(0, 10) : lines;
-          const numberedLines = displayLines
-            .map((line, idx) => `${idx + 1}: ${line}`)
+        if (viewRange) {
+          const [start, end] = viewRange;
+          const selectedLines = lines.slice(start - 1, end);
+          const numberedLines = selectedLines
+            .map((line, idx) => `${start + idx}: ${line}`)
             .join("\n");
-          const additionalLinesMessage =
-            totalLines > 10 ? `\n... +${totalLines - 10} lines` : "";
 
           return {
             success: true,
-            output: `Contents of ${filePath}:\n${numberedLines}${additionalLinesMessage}`,
+            output: `Lines ${start}-${end} of ${filePath}:\n${numberedLines}`,
           };
-        } catch (readError: any) {
-          // If read failed because it's a directory, list directory contents
-          if (readError.code === 'EISDIR' || readError.message?.includes('directory')) {
-            const files = await fs.readdir(resolvedPath);
-            return {
-              success: true,
-              output: `Directory contents of ${filePath}:\n${files.join("\n")}`,
-            };
-          }
-          throw readError;
         }
+
+        const totalLines = lines.length;
+        const displayLines = totalLines > 10 ? lines.slice(0, 10) : lines;
+        const numberedLines = displayLines
+          .map((line, idx) => `${idx + 1}: ${line}`)
+          .join("\n");
+        const additionalLinesMessage =
+          totalLines > 10 ? `\n... +${totalLines - 10} lines` : "";
+
+        return {
+          success: true,
+          output: `Contents of ${filePath}:\n${numberedLines}${additionalLinesMessage}`,
+        };
       } catch (accessError) {
         return {
           success: false,
