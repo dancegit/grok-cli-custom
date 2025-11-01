@@ -447,10 +447,6 @@ program
       }
 
       if (isPrintMode && fullPrompt.trim()) {
-        if (options.outputFormat === 'stream-json' || options.outputFormat === 'json') {
-          useAgent = false;
-        }
-
         await processPromptHeadless(
           fullPrompt,
           apiKey,

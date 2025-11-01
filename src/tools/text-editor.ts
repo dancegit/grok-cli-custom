@@ -1,6 +1,5 @@
-import fs from "fs-extra";
+import { promises as fs } from "fs";
 import * as path from "path";
-import { writeFile as writeFilePromise } from "fs/promises";
 import { ToolResult, EditorCommand } from "../types/index.js";
 import { ConfirmationService } from "../utils/confirmation-service.js";
 
@@ -15,7 +14,8 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      if (await fs.pathExists(resolvedPath)) {
+      try {
+        await fs.access(resolvedPath);
         const stats = await fs.stat(resolvedPath);
 
         if (stats.isDirectory()) {
@@ -54,7 +54,7 @@ export class TextEditorTool {
           success: true,
           output: `Contents of ${filePath}:\n${numberedLines}${additionalLinesMessage}`,
         };
-      } else {
+      } catch (accessError) {
         return {
           success: false,
           error: `File or directory not found: ${filePath}`,
@@ -77,7 +77,9 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      if (!(await fs.pathExists(resolvedPath))) {
+      try {
+        await fs.access(resolvedPath);
+      } catch {
         return {
           success: false,
           error: `File not found: ${filePath}`,
@@ -138,7 +140,7 @@ export class TextEditorTool {
       const newContent = replaceAll
         ? content.split(oldStr).join(newStr)
         : content.replace(oldStr, newStr);
-      await writeFilePromise(resolvedPath, newContent, "utf-8");
+      await fs.writeFile(resolvedPath, newContent, "utf-8");
 
       this.editHistory.push({
         command: "str_replace",
@@ -201,8 +203,8 @@ export class TextEditorTool {
       }
 
       const dir = path.dirname(resolvedPath);
-      await fs.ensureDir(dir);
-      await writeFilePromise(resolvedPath, content, "utf-8");
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(resolvedPath, content, "utf-8");
 
       this.editHistory.push({
         command: "create",
@@ -236,7 +238,9 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      if (!(await fs.pathExists(resolvedPath))) {
+      try {
+        await fs.access(resolvedPath);
+      } catch {
         return {
           success: false,
           error: `File not found: ${filePath}`,
@@ -291,7 +295,7 @@ export class TextEditorTool {
       lines.splice(startLine - 1, endLine - startLine + 1, ...replacementLines);
       const newFileContent = lines.join("\n");
 
-      await writeFilePromise(resolvedPath, newFileContent, "utf-8");
+      await fs.writeFile(resolvedPath, newFileContent, "utf-8");
 
       this.editHistory.push({
         command: "str_replace",
@@ -323,7 +327,9 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      if (!(await fs.pathExists(resolvedPath))) {
+      try {
+        await fs.access(resolvedPath);
+      } catch {
         return {
           success: false,
           error: `File not found: ${filePath}`,
@@ -336,7 +342,7 @@ export class TextEditorTool {
       lines.splice(insertLine - 1, 0, content);
       const newContent = lines.join("\n");
 
-      await writeFilePromise(resolvedPath, newContent, "utf-8");
+      await fs.writeFile(resolvedPath, newContent, "utf-8");
 
       this.editHistory.push({
         command: "insert",
@@ -376,13 +382,13 @@ export class TextEditorTool {
               lastEdit.new_str,
               lastEdit.old_str
             );
-            await writeFilePromise(lastEdit.path, revertedContent, "utf-8");
+            await fs.writeFile(lastEdit.path, revertedContent, "utf-8");
           }
           break;
 
         case "create":
           if (lastEdit.path) {
-            await fs.remove(lastEdit.path);
+            await fs.rm(lastEdit.path, { force: true });
           }
           break;
 
@@ -391,7 +397,7 @@ export class TextEditorTool {
             const content = await fs.readFile(lastEdit.path, "utf-8");
             const lines = content.split("\n");
             lines.splice(lastEdit.insert_line - 1, 1);
-            await writeFilePromise(lastEdit.path, lines.join("\n"), "utf-8");
+            await fs.writeFile(lastEdit.path, lines.join("\n"), "utf-8");
           }
           break;
       }
