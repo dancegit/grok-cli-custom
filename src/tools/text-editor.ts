@@ -77,8 +77,11 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      const content = await fs.readFile(resolvedPath, "utf-8").catch((error) => {
-        throw new Error(`File not found: ${filePath}`);
+      const content = await fs.readFile(resolvedPath, "utf-8").catch((error: any) => {
+        if (error.code === 'ENOENT') {
+          throw new Error(`File not found: ${filePath}`);
+        }
+        throw error;
       });
 
       if (!content.includes(oldStr)) {
@@ -231,8 +234,11 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      const fileContent = await fs.readFile(resolvedPath, "utf-8").catch((error) => {
-        throw new Error(`File not found: ${filePath}`);
+      const fileContent = await fs.readFile(resolvedPath, "utf-8").catch((error: any) => {
+        if (error.code === 'ENOENT') {
+          throw new Error(`File not found: ${filePath}`);
+        }
+        throw error;
       });
       const lines = fileContent.split("\n");
       
@@ -313,8 +319,11 @@ export class TextEditorTool {
     try {
       const resolvedPath = path.resolve(filePath);
 
-      const fileContent = await fs.readFile(resolvedPath, "utf-8").catch((error) => {
-        throw new Error(`File not found: ${filePath}`);
+      const fileContent = await fs.readFile(resolvedPath, "utf-8").catch((error: any) => {
+        if (error.code === 'ENOENT') {
+          throw new Error(`File not found: ${filePath}`);
+        }
+        throw error;
       });
       const lines = fileContent.split("\n");
 
